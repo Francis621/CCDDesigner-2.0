@@ -1,4 +1,4 @@
-# ADR-0001: 采用 Spring Boot 模块化单体（Modular Monolith）架构
+# ADR-0009: 采用 Spring Boot 模块化单体（Modular Monolith）架构
 
 ## 状态
 已接受 (Accepted)

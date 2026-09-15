@@ -1,4 +1,4 @@
-# ADR-0003: 采用 Kubernetes Job 容器化调度 OpenModelica 仿真计算
+# ADR-0011: 采用 Kubernetes Job 容器化调度 OpenModelica 仿真计算
 
 ## 状态
 已接受 (Accepted)

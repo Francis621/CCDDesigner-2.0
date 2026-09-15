@@ -1,4 +1,4 @@
-# ADR-0002: 采用 PostgreSQL 承载数字主线图关系与递归查询
+# ADR-0010: 采用 PostgreSQL 承载数字主线图关系与递归查询
 
 ## 状态
 已接受 (Accepted)
