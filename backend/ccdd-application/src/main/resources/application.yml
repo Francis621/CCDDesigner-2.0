@@ -1,0 +1,39 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: ccddesigner-core
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ccdd_dev}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+# CCDDesigner 2.0 平台专用配置
+ccdd:
+  security:
+    token-secret: ${JWT_SECRET:ccdd-sec-key-2026-very-secure-random-seed-phrase}
+    token-validity-seconds: 86400
+  storage:
+    minio:
+      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  flexo:
+    sparql-endpoint: ${FLEXO_SPARQL_ENDPOINT:http://localhost:8088/sparql}
+  simulation:
+    k8s:
+      namespace: ${SIM_K8S_NAMESPACE:ccdd-simulation}
+      default-timeout-seconds: 600
