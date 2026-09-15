@@ -1,0 +1,22 @@
+# macOS 系统文件
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# 编辑器与 IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 办公软件临时文件
+~$*
+*.tmp
+
+# 日志及临时目录
+logs/
+*.log
+tmp/
+temp/
