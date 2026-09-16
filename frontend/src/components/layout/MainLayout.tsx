@@ -25,6 +25,8 @@ import {
   PlusCircle,
   Edit3,
   Trash2,
+  UploadCloud,
+  FolderArchive,
 } from 'lucide-react';
 import { useAuthStore, SecurityClassification } from '@/stores/useAuthStore';
 import { useProjectStore } from '@/stores/useProjectStore';
@@ -196,6 +198,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       key: 'document-mgmt',
       icon: <FileText className="w-4 h-4" />,
       label: '图文档管理',
+      children: [
+        {
+          key: 'document-overview',
+          icon: <Layers className="w-4 h-4" />,
+          label: '图档台账与四层实体',
+        },
+        {
+          key: 'document-upload',
+          icon: <UploadCloud className="w-4 h-4" />,
+          label: '分片防篡改上传',
+        },
+        {
+          key: 'document-export',
+          icon: <FolderArchive className="w-4 h-4" />,
+          label: '受控交付包导出',
+        },
+      ],
     },
   ];
 
@@ -230,7 +249,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               theme="dark"
               mode="inline"
               selectedKeys={[currentTab]}
-              defaultOpenKeys={['project-mgmt', 'config-mgmt', 'product-config', 'process-design']}
+              defaultOpenKeys={['project-mgmt', 'config-mgmt', 'product-config', 'process-design', 'document-mgmt']}
               items={menuItems}
               onClick={({ key }) => onTabChange(key)}
               className="bg-transparent border-r-0 text-xs"

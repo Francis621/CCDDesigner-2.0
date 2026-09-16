@@ -7,6 +7,7 @@ import { SuperBomWizardPage } from './pages/SuperBomWizardPage';
 import { ThreadGraphPage } from './pages/ThreadGraphPage';
 import { MbomBalancePage } from './pages/MbomBalancePage';
 import { ProjectGateManagementPage } from './pages/ProjectGateManagementPage';
+import { DocumentManagementPage } from './pages/DocumentManagementPage';
 import { GenericModulePage } from './pages/GenericModulePage';
 
 export const App: React.FC = () => {
@@ -132,15 +133,11 @@ export const App: React.FC = () => {
           />
         );
       case 'document-mgmt':
-        return (
-          <GenericModulePage
-            moduleKey="document-mgmt"
-            moduleName="图文档管理"
-            category="档案中心"
-            description="基于 MinIO 对象存储纳管二维工程图样、SOP作业指导书、检验单及 3D 轻量化浏览文件。"
-            onNavigate={setActiveTab}
-          />
-        );
+      case 'document-overview':
+      case 'document-checkout':
+      case 'document-upload':
+      case 'document-export':
+        return <DocumentManagementPage />;
 
       default:
         return <WorkbenchPage onNavigate={(tab) => setActiveTab(tab)} />;

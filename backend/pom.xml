@@ -22,6 +22,7 @@
         <module>ccdd-bom-engine</module>
         <module>ccdd-manufacturing-handoff</module>
         <module>ccdd-project-gate</module>
+        <module>ccdd-document-mgmt</module>
         <module>ccdd-application</module>
     </modules>
 
@@ -101,6 +102,11 @@
             <dependency>
                 <groupId>com.ccdd</groupId>
                 <artifactId>ccdd-project-gate</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ccdd</groupId>
+                <artifactId>ccdd-document-mgmt</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
