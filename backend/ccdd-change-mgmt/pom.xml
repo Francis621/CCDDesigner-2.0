@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ccdd</groupId>
+        <artifactId>ccdd-parent</artifactId>
+        <version>2.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ccdd-change-mgmt</artifactId>
+    <name>CCDDesigner 2.0 - Engineering Change &amp; Disposition (M22)</name>
+    <description>M22 工程变更与影响处置微服务组件：ECR/ECO两阶段解耦、影响面拓扑推演、ADR-05互换性、ADR-08验证不继承与AT-22现场双重闭环</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-project-gate</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-document-mgmt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-baseline</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

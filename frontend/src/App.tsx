@@ -9,6 +9,7 @@ import { MbomBalancePage } from './pages/MbomBalancePage';
 import { ProjectGateManagementPage } from './pages/ProjectGateManagementPage';
 import { DocumentManagementPage } from './pages/DocumentManagementPage';
 import { BaselineManagementPage } from './pages/BaselineManagementPage';
+import { ChangeManagementPage } from './pages/ChangeManagementPage';
 import { GenericModulePage } from './pages/GenericModulePage';
 
 export const App: React.FC = () => {
@@ -116,15 +117,7 @@ export const App: React.FC = () => {
       case 'baseline-mgmt':
         return <BaselineManagementPage />;
       case 'change-mgmt':
-        return (
-          <GenericModulePage
-            moduleKey="change-mgmt"
-            moduleName="变更管理"
-            category="工程变更委员会 (CCB)"
-            description="实施 ECR 变更申请、ECO 变更指令、波及影响自动推演及车间下发批次召回闭环。"
-            onNavigate={setActiveTab}
-          />
-        );
+        return <ChangeManagementPage />;
       case 'document-mgmt':
       case 'document-overview':
       case 'document-checkout':
