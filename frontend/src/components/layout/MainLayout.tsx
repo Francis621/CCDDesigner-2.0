@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
-import { Layout, Dropdown, MenuProps, Tag, Tooltip } from 'antd';
+import { Layout, Menu, Dropdown, MenuProps, Tag, Tooltip } from 'antd';
 import {
   LayoutDashboard,
+  Mail,
+  CheckSquare,
+  FileSpreadsheet,
+  Briefcase,
+  GitMerge,
+  Cpu,
+  Package,
+  Sliders,
   Layers,
+  Settings,
   GitFork,
+  PenTool,
+  Factory,
   ShieldCheck,
+  BookmarkCheck,
+  GitCompare,
+  FileText,
   Shield,
   Box,
   LogOut,
@@ -56,83 +70,159 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     }
   };
 
-  const menuItems = [
+  // 严格按照用户需求文档规格构建的主菜单树
+  const menuItems: MenuProps['items'] = [
     {
       key: 'workbench',
       icon: <LayoutDashboard className="w-4 h-4" />,
-      label: '协同工作台 (M01)',
+      label: '协同工作台',
     },
     {
-      key: 'super-bom',
-      icon: <Layers className="w-4 h-4" />,
-      label: '150% Super BOM 向导 (M14)',
+      key: 'mailbox',
+      icon: <Mail className="w-4 h-4" />,
+      label: '邮箱',
     },
     {
-      key: 'thread',
-      icon: <GitFork className="w-4 h-4" />,
-      label: '数字主线因果拓扑 (M23)',
+      key: 'my-tasks',
+      icon: <CheckSquare className="w-4 h-4" />,
+      label: '我的任务',
     },
     {
-      key: 'mbom',
-      icon: <ShieldCheck className="w-4 h-4" />,
-      label: 'EBOM/MBOM 平衡看板 (M25)',
+      type: 'divider',
+      className: 'bg-slate-800 my-2',
+    },
+    {
+      key: 'order-mgmt',
+      icon: <FileSpreadsheet className="w-4 h-4" />,
+      label: '订单管理',
+    },
+    {
+      key: 'project-mgmt',
+      icon: <Briefcase className="w-4 h-4" />,
+      label: '项目管理',
+    },
+    {
+      key: 'process-mgmt',
+      icon: <GitMerge className="w-4 h-4" />,
+      label: '流程管理',
+    },
+    {
+      key: 'system-design',
+      icon: <Cpu className="w-4 h-4" />,
+      label: '系统设计',
+    },
+    {
+      key: 'product-platform',
+      icon: <Package className="w-4 h-4" />,
+      label: '产品平台',
+    },
+    {
+      key: 'config-mgmt',
+      icon: <Sliders className="w-4 h-4" />,
+      label: '配置管理',
+      children: [
+        {
+          key: 'super-bom',
+          icon: <Layers className="w-4 h-4" />,
+          label: '150% Super BOM 向导',
+        },
+      ],
+    },
+    {
+      key: 'product-config',
+      icon: <Settings className="w-4 h-4" />,
+      label: '产品配置',
+      children: [
+        {
+          key: 'thread',
+          icon: <GitFork className="w-4 h-4" />,
+          label: '数字主线因果拓扑',
+        },
+      ],
+    },
+    {
+      key: 'detail-design',
+      icon: <PenTool className="w-4 h-4" />,
+      label: '详细设计',
+    },
+    {
+      key: 'process-design',
+      icon: <Factory className="w-4 h-4" />,
+      label: '工艺设计',
+      children: [
+        {
+          key: 'mbom',
+          icon: <ShieldCheck className="w-4 h-4" />,
+          label: 'EBOM/MBOM平衡看板',
+        },
+      ],
+    },
+    {
+      key: 'baseline-mgmt',
+      icon: <BookmarkCheck className="w-4 h-4" />,
+      label: '基线管理',
+    },
+    {
+      key: 'change-mgmt',
+      icon: <GitCompare className="w-4 h-4" />,
+      label: '变更管理',
+    },
+    {
+      key: 'document-mgmt',
+      icon: <FileText className="w-4 h-4" />,
+      label: '图文档管理',
     },
   ];
 
   return (
     <Layout className="min-h-screen">
-      {/* 侧边导航栏 */}
+      {/* 侧边主菜单导航栏 */}
       <Sider
         collapsible
         collapsed={collapsed}
         onCollapse={(value) => setCollapsed(value)}
         theme="dark"
-        className="bg-slate-900 border-r border-slate-800"
+        className="bg-slate-900 border-r border-slate-800 flex flex-col justify-between"
         width={250}
       >
-        <div className="p-4 flex items-center gap-3 border-b border-slate-800">
-          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-md">
-            <Box className="w-5 h-5" />
+        <div className="flex flex-col h-full">
+          {/* 系统 Logo 与产品标识 */}
+          <div className="p-4 flex items-center gap-3 border-b border-slate-800 shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-md shrink-0">
+              <Box className="w-5 h-5" />
+            </div>
+            {!collapsed && (
+              <div className="overflow-hidden">
+                <div className="font-bold text-white tracking-wide text-sm truncate">CCDDesigner 2.0</div>
+                <div className="text-[10px] text-slate-400 font-mono truncate">高端数控机床正向设计</div>
+              </div>
+            )}
           </div>
+
+          {/* 滚动菜单主体 */}
+          <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
+            <Menu
+              theme="dark"
+              mode="inline"
+              selectedKeys={[currentTab]}
+              defaultOpenKeys={['config-mgmt', 'product-config', 'process-design']}
+              items={menuItems}
+              onClick={({ key }) => onTabChange(key)}
+              className="bg-transparent border-r-0 text-xs"
+            />
+          </div>
+
+          {/* 底部运行环境状态 */}
           {!collapsed && (
-            <div>
-              <div className="font-bold text-white tracking-wide text-sm">CCDDesigner 2.0</div>
-              <div className="text-[10px] text-slate-400 font-mono">高端数控机床正向设计</div>
+            <div className="p-4 border-t border-slate-800 text-slate-400 text-xs shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>主干聚合服务 (在线)</span>
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1">PostgreSQL & MinIO 正常</div>
             </div>
           )}
         </div>
-
-        <div className="py-4">
-          <div className="px-3 space-y-1">
-            {menuItems.map((item) => {
-              const active = currentTab === item.key;
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => onTabChange(item.key)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${
-                    active
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                  }`}
-                >
-                  <span className={active ? 'text-white' : 'text-slate-400'}>{item.icon}</span>
-                  {!collapsed && <span>{item.label}</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {!collapsed && (
-          <div className="absolute bottom-12 left-0 right-0 p-4 border-t border-slate-800 text-slate-400 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>单体聚合服务 (在线)</span>
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1">PostgreSQL & MinIO 2PC 正常</div>
-          </div>
-        )}
       </Sider>
 
       <Layout className="bg-slate-50">
