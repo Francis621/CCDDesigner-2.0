@@ -11,6 +11,7 @@ import { DocumentManagementPage } from './pages/DocumentManagementPage';
 import { BaselineManagementPage } from './pages/BaselineManagementPage';
 import { ChangeManagementPage } from './pages/ChangeManagementPage';
 import { UserManagementPage } from './pages/UserManagementPage';
+import { MailboxPage } from './pages/MailboxPage';
 import { GenericModulePage } from './pages/GenericModulePage';
 
 export const App: React.FC = () => {
@@ -22,15 +23,7 @@ export const App: React.FC = () => {
       case 'workbench':
         return <WorkbenchPage onNavigate={(tab) => setActiveTab(tab)} />;
       case 'mailbox':
-        return (
-          <GenericModulePage
-            moduleKey="mailbox"
-            moduleName="邮箱系统"
-            category="个人协同中心"
-            description="集中接收项目通知、制造下发批次回执异常告警及 ECN 工程变更审批邮件。"
-            onNavigate={setActiveTab}
-          />
-        );
+        return <MailboxPage onNavigate={(tab) => setActiveTab(tab)} />;
       case 'my-tasks':
         return (
           <GenericModulePage
