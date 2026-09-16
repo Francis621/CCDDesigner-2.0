@@ -21,15 +21,86 @@ public class ProjectGateRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
+    private final Map<Long, ProjectEntity> memoryProjectMap = new LinkedHashMap<>();
+
     public ProjectGateRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+        initMockProjects();
+    }
+
+    private void initMockProjects() {
+        ProjectEntity p1 = ProjectEntity.builder()
+                .projectId(1001L)
+                .tenantId("TENANT_DEFAULT")
+                .projectCode("PRJ-VMC850-5AXIS")
+                .name("高刚度立式五轴加工中心正向研制项目 (平台级机型)")
+                .projectType("PLATFORM")
+                .managerId("PM-ZHANG-001")
+                .chiefEngineerId("ENG-WANG-CHIEF")
+                .currentStageId(203L)
+                .status("ACTIVE")
+                .build();
+        ProjectEntity p2 = ProjectEntity.builder()
+                .projectId(1002L)
+                .tenantId("TENANT_DEFAULT")
+                .projectCode("PRJ-HMC630-DUAL")
+                .name("卧式双工作台柔性加工中心正向研制项目 (衍生机型)")
+                .projectType("DERIVATIVE")
+                .managerId("PM-LI-002")
+                .chiefEngineerId("ENG-CHEN-CHIEF")
+                .currentStageId(202L)
+                .status("ACTIVE")
+                .build();
+        ProjectEntity p3 = ProjectEntity.builder()
+                .projectId(1003L)
+                .tenantId("TENANT_DEFAULT")
+                .projectCode("PRJ-GMC2030-ULTRA")
+                .name("超精密五轴龙门铣削加工中心重大专项工程")
+                .projectType("PLATFORM")
+                .managerId("PM-SUN-003")
+                .chiefEngineerId("ENG-ZHAO-CHIEF")
+                .currentStageId(201L)
+                .status("ACTIVE")
+                .build();
+        memoryProjectMap.put(p1.getProjectId(), p1);
+        memoryProjectMap.put(p2.getProjectId(), p2);
+        memoryProjectMap.put(p3.getProjectId(), p3);
     }
 
     // ==========================================
-    // 阶段与阶段门查询
+    // 项目 CRUD 与阶段查询
     // ==========================================
 
+    public List<ProjectEntity> findAllProjects(String tenantId) {
+        String sql = "SELECT project_id, program_id, tenant_id, project_code, name, project_type, " +
+                "manager_id, chief_engineer_id, current_stage_id, status, working_version, created_by, created_at, updated_at " +
+                "FROM plm_project.project WHERE tenant_id = ? ORDER BY project_id ASC";
+        try {
+            List<ProjectEntity> list = jdbcTemplate.query(sql, (rs, rowNum) -> ProjectEntity.builder()
+                    .projectId(rs.getLong("project_id"))
+                    .programId(rs.getLong("program_id"))
+                    .tenantId(rs.getString("tenant_id"))
+                    .projectCode(rs.getString("project_code"))
+                    .name(rs.getString("name"))
+                    .projectType(rs.getString("project_type"))
+                    .managerId(rs.getString("manager_id"))
+                    .chiefEngineerId(rs.getString("chief_engineer_id"))
+                    .currentStageId(rs.getLong("current_stage_id"))
+                    .status(rs.getString("status"))
+                    .workingVersion(rs.getLong("working_version"))
+                    .createdBy(rs.getString("created_by"))
+                    .build(), tenantId);
+            if (!list.isEmpty()) return list;
+        } catch (Exception e) {
+            log.warn("查询项目列表异常，使用内存多机床项目种子: {}", e.getMessage());
+        }
+        return new ArrayList<>(memoryProjectMap.values());
+    }
+
     public Optional<ProjectEntity> findProjectById(String tenantId, Long projectId) {
+        if (memoryProjectMap.containsKey(projectId)) {
+            return Optional.of(memoryProjectMap.get(projectId));
+        }
         String sql = "SELECT project_id, program_id, tenant_id, project_code, name, project_type, " +
                 "manager_id, chief_engineer_id, current_stage_id, status, working_version, created_by, created_at, updated_at " +
                 "FROM plm_project.project WHERE tenant_id = ? AND project_id = ?";
@@ -53,6 +124,20 @@ public class ProjectGateRepository {
             log.warn("查询项目异常，使用默认五轴加工中心项目种子: {}", e.getMessage());
         }
         return Optional.of(createMockProject(tenantId, projectId));
+    }
+
+    public ProjectEntity saveProject(ProjectEntity entity) {
+        memoryProjectMap.put(entity.getProjectId(), entity);
+        return entity;
+    }
+
+    public ProjectEntity updateProject(ProjectEntity entity) {
+        memoryProjectMap.put(entity.getProjectId(), entity);
+        return entity;
+    }
+
+    public boolean deleteProject(Long projectId) {
+        return memoryProjectMap.remove(projectId) != null;
     }
 
     public List<StageEntity> findStagesByProjectId(Long projectId) {

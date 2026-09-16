@@ -15,6 +15,7 @@ import {
   Select,
   Timeline,
   Divider,
+  Popconfirm,
 } from 'antd';
 import {
   CheckCircle2,
@@ -33,6 +34,9 @@ import {
   PlusCircle,
   CheckSquare,
   Network,
+  Edit3,
+  Trash2,
+  FolderPlus,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { apiClient } from '../infra/api/httpClient';
@@ -113,15 +117,6 @@ interface ActionItem {
   resolutionSummary?: string;
 }
 
-interface WbsNode {
-  wbsNodeId: number;
-  projectId: number;
-  parentNodeId?: number;
-  wbsCode: string;
-  name: string;
-  nodeLevel: number;
-}
-
 interface Task {
   taskId: number;
   wbsNodeId: number;
@@ -189,8 +184,18 @@ interface TaskDeliverableGroup {
   submissions: DeliverableSubmission[];
 }
 
-export const ProjectGateManagementPage: React.FC = () => {
+interface ProjectGateManagementPageProps {
+  activeSubAction?: 'overview' | 'create' | 'edit' | 'delete';
+  onNavigateSubAction?: (action: string) => void;
+}
+
+export const ProjectGateManagementPage: React.FC<ProjectGateManagementPageProps> = ({
+  activeSubAction = 'overview',
+  onNavigateSubAction,
+}) => {
   const [loading, setLoading] = useState<boolean>(false);
+  const [projectList, setProjectList] = useState<ProjectEntity[]>([]);
+  const [currentProjectId, setCurrentProjectId] = useState<number>(1001);
   const [project, setProject] = useState<ProjectEntity | null>(null);
   const [stages, setStages] = useState<StageEntity[]>([]);
   const [gates, setGates] = useState<GateEntity[]>([]);
@@ -201,7 +206,6 @@ export const ProjectGateManagementPage: React.FC = () => {
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
 
   // WBS 与 CPM
-  const [, setWbsNodes] = useState<WbsNode[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [dependencies, setDependencies] = useState<TaskDependency[]>([]);
   const [cpmReport, setCpmReport] = useState<CpmAnalysisReport | null>(null);
@@ -214,18 +218,47 @@ export const ProjectGateManagementPage: React.FC = () => {
   const [decisionModalOpen, setDecisionModalOpen] = useState<boolean>(false);
   const [submitDeliverableModalOpen, setSubmitDeliverableModalOpen] = useState<boolean>(false);
   const [closeActionModalOpen, setCloseActionModalOpen] = useState<boolean>(false);
+  const [createProjectModalOpen, setCreateProjectModalOpen] = useState<boolean>(false);
+  const [editProjectModalOpen, setEditProjectModalOpen] = useState<boolean>(false);
+  const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState<boolean>(false);
+
   const [currentActionItem, setCurrentActionItem] = useState<ActionItem | null>(null);
   const [targetReqId, setTargetReqId] = useState<number | null>(null);
 
   const [decisionForm] = Form.useForm();
   const [deliverableForm] = Form.useForm();
   const [closeActionForm] = Form.useForm();
+  const [createProjectForm] = Form.useForm();
+  const [editProjectForm] = Form.useForm();
+
+  // 根据父组件传入的 activeSubAction 自动打开对应模态操作
+  useEffect(() => {
+    if (activeSubAction === 'create') {
+      setCreateProjectModalOpen(true);
+    } else if (activeSubAction === 'edit') {
+      setEditProjectModalOpen(true);
+    } else if (activeSubAction === 'delete') {
+      setDeleteProjectModalOpen(true);
+    }
+  }, [activeSubAction]);
+
+  // 获取全部项目列表
+  const fetchProjectList = useCallback(async () => {
+    try {
+      const res: any = await apiClient.get('/projects');
+      if (res.data) {
+        setProjectList(res.data);
+      }
+    } catch (e: any) {
+      console.error('获取项目列表失败', e);
+    }
+  }, []);
 
   // 1. 初始化加载项目全景与任务数据
-  const loadOverview = useCallback(async () => {
+  const loadOverview = useCallback(async (projId: number) => {
     try {
       setLoading(true);
-      const res: any = await apiClient.get('/projects/1001/gate-overview');
+      const res: any = await apiClient.get(`/projects/${projId}/gate-overview`);
       if (res.data) {
         setProject(res.data.project);
         setStages(res.data.stages || []);
@@ -235,21 +268,20 @@ export const ProjectGateManagementPage: React.FC = () => {
         const defaultGate = tr3 || res.data.currentGate || res.data.gates[0];
         setActiveGate(defaultGate);
         if (defaultGate) {
-          fetchPreCheck(defaultGate.gateId);
-          fetchActionItems(defaultGate.gateId);
+          fetchPreCheck(projId, defaultGate.gateId);
+          fetchActionItems(projId, defaultGate.gateId);
         }
       }
 
       // 加载 WBS 与 任务
-      const wbsRes: any = await apiClient.get('/projects/1001/wbs-tasks');
+      const wbsRes: any = await apiClient.get(`/projects/${projId}/wbs-tasks`);
       if (wbsRes.data) {
-        setWbsNodes(wbsRes.data.wbsNodes || []);
         setTasks(wbsRes.data.tasks || []);
         setDependencies(wbsRes.data.dependencies || []);
       }
 
       // 执行 CPM 分析
-      const cpmRes: any = await apiClient.get('/projects/1001/cpm-analysis');
+      const cpmRes: any = await apiClient.get(`/projects/${projId}/cpm-analysis`);
       if (cpmRes.data) {
         setCpmReport(cpmRes.data);
       }
@@ -263,9 +295,9 @@ export const ProjectGateManagementPage: React.FC = () => {
     }
   }, []);
 
-  const fetchPreCheck = async (gateId: number) => {
+  const fetchPreCheck = async (projId: number, gateId: number) => {
     try {
-      const res: any = await apiClient.get(`/projects/1001/gates/${gateId}/pre-check`);
+      const res: any = await apiClient.get(`/projects/${projId}/gates/${gateId}/pre-check`);
       if (res.data) {
         setPreCheckReport(res.data);
       }
@@ -274,9 +306,9 @@ export const ProjectGateManagementPage: React.FC = () => {
     }
   };
 
-  const fetchActionItems = async (gateId: number) => {
+  const fetchActionItems = async (projId: number, gateId: number) => {
     try {
-      const res: any = await apiClient.get(`/projects/1001/gates/${gateId}/action-items`);
+      const res: any = await apiClient.get(`/projects/${projId}/gates/${gateId}/action-items`);
       if (res.data) {
         setActionItems(res.data);
       }
@@ -285,9 +317,9 @@ export const ProjectGateManagementPage: React.FC = () => {
     }
   };
 
-  const fetchTaskDeliverables = useCallback(async (taskId: number) => {
+  const fetchTaskDeliverables = useCallback(async (projId: number, taskId: number) => {
     try {
-      const res: any = await apiClient.get(`/projects/1001/tasks/${taskId}/deliverables`);
+      const res: any = await apiClient.get(`/projects/${projId}/tasks/${taskId}/deliverables`);
       if (res.data) {
         setTaskDeliverables(res.data);
       }
@@ -297,20 +329,120 @@ export const ProjectGateManagementPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadOverview();
-  }, [loadOverview]);
+    fetchProjectList();
+    loadOverview(currentProjectId);
+  }, [fetchProjectList, loadOverview, currentProjectId]);
 
   useEffect(() => {
     if (selectedTaskId) {
-      fetchTaskDeliverables(selectedTaskId);
+      fetchTaskDeliverables(currentProjectId, selectedTaskId);
     }
-  }, [selectedTaskId, fetchTaskDeliverables]);
+  }, [selectedTaskId, fetchTaskDeliverables, currentProjectId]);
+
+  // 当 project 加载完成时，同步回填编辑表单
+  useEffect(() => {
+    if (project) {
+      editProjectForm.setFieldsValue({
+        projectCode: project.projectCode,
+        name: project.name,
+        projectType: project.projectType,
+        managerId: project.managerId,
+        chiefEngineerId: project.chiefEngineerId,
+      });
+    }
+  }, [project, editProjectForm]);
 
   // 阶段门切换处理
   const handleSelectGate = (gate: GateEntity) => {
     setActiveGate(gate);
-    fetchPreCheck(gate.gateId);
-    fetchActionItems(gate.gateId);
+    fetchPreCheck(currentProjectId, gate.gateId);
+    fetchActionItems(currentProjectId, gate.gateId);
+  };
+
+  // 切换选中项目
+  const handleSelectProject = (projId: number) => {
+    setCurrentProjectId(projId);
+    loadOverview(projId);
+  };
+
+  // 创建新机床研制项目
+  const handleCreateProject = async () => {
+    try {
+      const values = await createProjectForm.validateFields();
+      const res: any = await apiClient.post('/projects', values);
+      if (res.code === 200) {
+        notification.success({
+          message: '机床项目立项创建成功',
+          description: `项目代号: ${res.data.projectCode}，名称: ${res.data.name}`,
+        });
+        confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+        setCreateProjectModalOpen(false);
+        createProjectForm.resetFields();
+        await fetchProjectList();
+        setCurrentProjectId(res.data.projectId);
+        if (onNavigateSubAction) onNavigateSubAction('project-mgmt-overview');
+      } else {
+        notification.error({ message: '创建项目失败', description: res.message });
+      }
+    } catch (e: any) {
+      notification.error({
+        message: '创建项目异常',
+        description: e.response?.data?.message || e.message || '操作失败',
+      });
+    }
+  };
+
+  // 编辑机床研制项目
+  const handleUpdateProject = async () => {
+    try {
+      const values = await editProjectForm.validateFields();
+      const res: any = await apiClient.put(`/projects/${currentProjectId}`, values);
+      if (res.code === 200) {
+        notification.success({
+          message: '项目信息修改已保存',
+          description: `项目 #${currentProjectId} 元数据已更新`,
+        });
+        setEditProjectModalOpen(false);
+        await fetchProjectList();
+        loadOverview(currentProjectId);
+        if (onNavigateSubAction) onNavigateSubAction('project-mgmt-overview');
+      } else {
+        notification.error({ message: '修改项目失败', description: res.message });
+      }
+    } catch (e: any) {
+      notification.error({
+        message: '修改项目异常',
+        description: e.response?.data?.message || e.message || '操作失败',
+      });
+    }
+  };
+
+  // 删除机床研制项目
+  const handleDeleteProject = async (projId: number) => {
+    try {
+      const res: any = await apiClient.delete(`/projects/${projId}`);
+      if (res.code === 200) {
+        notification.success({
+          message: '项目已安全删除/归档',
+          description: `项目 #${projId} 已从活跃研发列表中移除`,
+        });
+        await fetchProjectList();
+        // 切换到列表中的其它项目
+        const remaining = projectList.filter((p) => p.projectId !== projId);
+        if (remaining.length > 0) {
+          setCurrentProjectId(remaining[0].projectId);
+        }
+        setDeleteProjectModalOpen(false);
+        if (onNavigateSubAction) onNavigateSubAction('project-mgmt-overview');
+      } else {
+        notification.error({ message: '删除项目失败', description: res.message });
+      }
+    } catch (e: any) {
+      notification.error({
+        message: '删除项目被系统拦截',
+        description: e.response?.data?.message || e.message || '无法删除受保护的核心项目',
+      });
+    }
   };
 
   // 签署阶段门决策
@@ -338,7 +470,7 @@ export const ProjectGateManagementPage: React.FC = () => {
       };
 
       const res: any = await apiClient.post(
-        `/projects/1001/gates/${activeGate.gateId}/decisions`,
+        `/projects/${currentProjectId}/gates/${activeGate.gateId}/decisions`,
         payload
       );
 
@@ -350,7 +482,7 @@ export const ProjectGateManagementPage: React.FC = () => {
         confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
         setDecisionModalOpen(false);
         decisionForm.resetFields();
-        loadOverview();
+        loadOverview(currentProjectId);
       } else {
         notification.error({
           message: '签署被系统拦截',
@@ -372,7 +504,7 @@ export const ProjectGateManagementPage: React.FC = () => {
       if (!activeGate || !currentActionItem) return;
 
       const res: any = await apiClient.post(
-        `/projects/1001/gates/${activeGate.gateId}/action-items/${currentActionItem.actionItemId}/close`,
+        `/projects/${currentProjectId}/gates/${activeGate.gateId}/action-items/${currentActionItem.actionItemId}/close`,
         { notes: values.notes }
       );
 
@@ -383,7 +515,7 @@ export const ProjectGateManagementPage: React.FC = () => {
         });
         setCloseActionModalOpen(false);
         closeActionForm.resetFields();
-        fetchActionItems(activeGate.gateId);
+        fetchActionItems(currentProjectId, activeGate.gateId);
       }
     } catch (e: any) {
       notification.error({ message: '行动项闭环失败', description: e.message });
@@ -397,7 +529,7 @@ export const ProjectGateManagementPage: React.FC = () => {
       if (!targetReqId) return;
 
       const res: any = await apiClient.post(
-        `/projects/1001/tasks/${selectedTaskId}/deliverables/${targetReqId}/submit`,
+        `/projects/${currentProjectId}/tasks/${selectedTaskId}/deliverables/${targetReqId}/submit`,
         {
           notes: values.notes,
           user: 'ENG-ZHOU (主管结构工程师)',
@@ -411,8 +543,8 @@ export const ProjectGateManagementPage: React.FC = () => {
         });
         setSubmitDeliverableModalOpen(false);
         deliverableForm.resetFields();
-        fetchTaskDeliverables(selectedTaskId);
-        if (activeGate) fetchPreCheck(activeGate.gateId);
+        fetchTaskDeliverables(currentProjectId, selectedTaskId);
+        if (activeGate) fetchPreCheck(currentProjectId, activeGate.gateId);
       }
     } catch (e: any) {
       notification.error({ message: '交付物提审失败', description: e.message });
@@ -421,6 +553,51 @@ export const ProjectGateManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* 顶部操作工具栏：项目快速切换与创建、编辑、删除操作按钮 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold text-slate-700 whitespace-nowrap">当前研制项目:</span>
+          <Select
+            value={currentProjectId}
+            onChange={handleSelectProject}
+            style={{ width: 340 }}
+            options={projectList.map((p) => ({
+              value: p.projectId,
+              label: `${p.projectCode} - ${p.name}`,
+            }))}
+          />
+          <Tag color="geekblue" className="font-mono text-xs">
+            ID: {currentProjectId}
+          </Tag>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            type="primary"
+            icon={<PlusCircle className="w-4 h-4" />}
+            onClick={() => setCreateProjectModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1.5"
+          >
+            创建项目
+          </Button>
+          <Button
+            icon={<Edit3 className="w-4 h-4 text-indigo-600" />}
+            onClick={() => setEditProjectModalOpen(true)}
+            className="flex items-center gap-1.5 text-indigo-700 border-indigo-200 hover:border-indigo-400"
+          >
+            编辑项目
+          </Button>
+          <Button
+            danger
+            icon={<Trash2 className="w-4 h-4" />}
+            onClick={() => setDeleteProjectModalOpen(true)}
+            className="flex items-center gap-1.5"
+          >
+            删除项目
+          </Button>
+        </div>
+      </div>
+
       {/* 顶部机床项目全景横幅 */}
       <Card
         loading={loading}
@@ -449,7 +626,9 @@ export const ProjectGateManagementPage: React.FC = () => {
           <div className="flex items-center gap-4 bg-white/10 p-4 rounded-xl backdrop-blur-md border border-white/10">
             <div className="text-center px-3 border-r border-white/20">
               <div className="text-xs text-slate-400">项目总师</div>
-              <div className="text-sm font-semibold text-white mt-1">王总师 (Chief Eng)</div>
+              <div className="text-sm font-semibold text-white mt-1">
+                {project?.chiefEngineerId || '王总师 (Chief Eng)'}
+              </div>
             </div>
             <div className="text-center px-3 border-r border-white/20">
               <div className="text-xs text-slate-400">关键路径工期</div>
@@ -591,7 +770,7 @@ export const ProjectGateManagementPage: React.FC = () => {
                           <Button
                             size="small"
                             icon={<RefreshCw className="w-3.5 h-3.5" />}
-                            onClick={() => activeGate && fetchPreCheck(activeGate.gateId)}
+                            onClick={() => activeGate && fetchPreCheck(currentProjectId, activeGate.gateId)}
                           >
                             重新评估
                           </Button>
@@ -913,7 +1092,6 @@ export const ProjectGateManagementPage: React.FC = () => {
                             size="small"
                             onClick={() => {
                               setSelectedTaskId(row.taskId);
-                              // 切换到交付物 Tab
                               const tabsEl = document.querySelector('.ant-tabs-nav-list');
                               if (tabsEl) {
                                 const delivTab = tabsEl.querySelectorAll('.ant-tabs-tab')[2] as HTMLElement;
@@ -1057,6 +1235,228 @@ export const ProjectGateManagementPage: React.FC = () => {
           },
         ]}
       />
+
+      {/* 弹窗 A: 创建项目 */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2 text-slate-800">
+            <FolderPlus className="w-5 h-5 text-blue-600" />
+            <span>创建高端数控机床正向研制项目 (New Machine Project)</span>
+          </div>
+        }
+        open={createProjectModalOpen}
+        onCancel={() => {
+          setCreateProjectModalOpen(false);
+          if (onNavigateSubAction) onNavigateSubAction('project-mgmt-overview');
+        }}
+        onOk={handleCreateProject}
+        width={600}
+        okText="立即立项创建"
+        cancelText="取消"
+      >
+        <Form form={createProjectForm} layout="vertical" className="mt-4">
+          <Form.Item
+            name="projectCode"
+            label="项目代号 (Project Code)"
+            rules={[{ required: true, message: '请输入项目代号，如 PRJ-HMC630-DUAL' }]}
+            initialValue="PRJ-HMC500-FMS"
+          >
+            <Input placeholder="输入项目唯一代号，如 PRJ-VMC850-5AXIS" className="font-mono" />
+          </Form.Item>
+
+          <Form.Item
+            name="name"
+            label="机床项目全称"
+            rules={[{ required: true, message: '请输入机床项目全称' }]}
+            initialValue="高精度卧式柔性制造加工中心研制工程"
+          >
+            <Input placeholder="输入机床产品研发项目名称" />
+          </Form.Item>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item
+              name="projectType"
+              label="机床产品类型"
+              rules={[{ required: true, message: '请选择项目类型' }]}
+              initialValue="PLATFORM"
+            >
+              <Select
+                options={[
+                  { value: 'PLATFORM', label: '平台级核心机型 (PLATFORM)' },
+                  { value: 'DERIVATIVE', label: '客户定制衍生机型 (DERIVATIVE)' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item
+              name="managerId"
+              label="项目管理主管 (PM)"
+              rules={[{ required: true, message: '请输入项目主管 ID' }]}
+              initialValue="PM-CHEN-005"
+            >
+              <Input placeholder="项目经理工号" />
+            </Form.Item>
+          </div>
+
+          <Form.Item
+            name="chiefEngineerId"
+            label="机床总工程师 (Chief Engineer)"
+            rules={[{ required: true, message: '请输入总工程师 ID' }]}
+            initialValue="ENG-WANG-CHIEF"
+          >
+            <Input placeholder="总师工号" />
+          </Form.Item>
+
+          <Form.Item
+            name="description"
+            label="研制背景与指标论证说明"
+            initialValue="面向航空航天高刚性叶轮叶盘精密加工需求，开展直联大扭矩电主轴、双工作台快速交换及热误差综合补偿正向设计。"
+          >
+            <Input.TextArea rows={3} placeholder="输入研制背景、机床主规格与目标" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 弹窗 B: 编辑项目 */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2 text-slate-800">
+            <Edit3 className="w-5 h-5 text-indigo-600" />
+            <span>编辑机床研制项目信息 (Edit Project #{currentProjectId})</span>
+          </div>
+        }
+        open={editProjectModalOpen}
+        onCancel={() => {
+          setEditProjectModalOpen(false);
+          if (onNavigateSubAction) onNavigateSubAction('project-mgmt-overview');
+        }}
+        onOk={handleUpdateProject}
+        width={600}
+        okText="保存修改"
+        cancelText="取消"
+      >
+        <Form form={editProjectForm} layout="vertical" className="mt-4">
+          <Form.Item name="projectCode" label="项目代号 (不可变)">
+            <Input disabled className="font-mono bg-slate-50" />
+          </Form.Item>
+
+          <Form.Item
+            name="name"
+            label="机床项目全称"
+            rules={[{ required: true, message: '项目全称不能为空' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item name="projectType" label="机床产品类型">
+              <Select
+                options={[
+                  { value: 'PLATFORM', label: '平台级核心机型 (PLATFORM)' },
+                  { value: 'DERIVATIVE', label: '客户定制衍生机型 (DERIVATIVE)' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item name="managerId" label="项目主管 (PM)">
+              <Input />
+            </Form.Item>
+          </div>
+
+          <Form.Item name="chiefEngineerId" label="机床总工程师 (Chief Engineer)">
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 弹窗 C: 删除项目与项目台账安全管理 */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2 text-red-600 font-bold">
+            <Trash2 className="w-5 h-5" />
+            <span>机床研制项目删除与归档管理 (Delete / Archive Projects)</span>
+          </div>
+        }
+        open={deleteProjectModalOpen}
+        onCancel={() => {
+          setDeleteProjectModalOpen(false);
+          if (onNavigateSubAction) onNavigateSubAction('project-mgmt-overview');
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setDeleteProjectModalOpen(false);
+              if (onNavigateSubAction) onNavigateSubAction('project-mgmt-overview');
+            }}
+          >
+            关闭返回
+          </Button>,
+        ]}
+        width={720}
+      >
+        <div className="mt-3 space-y-4">
+          <Alert
+            type="warning"
+            showIcon
+            message="项目删除规约警示 (Protection Notice)"
+            description="删除研制项目将同步清理其阶段门、WBS 任务网络与交付物规约。已锁定基线并处于关键评审状态的核心平台机型具备高风险守护。"
+          />
+
+          <Table
+            dataSource={projectList}
+            rowKey="projectId"
+            pagination={false}
+            size="small"
+            columns={[
+              {
+                title: '项目代号',
+                dataIndex: 'projectCode',
+                key: 'projectCode',
+                render: (code: string) => <span className="font-mono font-bold text-xs">{code}</span>,
+              },
+              {
+                title: '机床全称',
+                dataIndex: 'name',
+                key: 'name',
+                render: (name: string) => <span className="text-xs">{name}</span>,
+              },
+              {
+                title: '机型属性',
+                dataIndex: 'projectType',
+                key: 'projectType',
+                render: (type: string) => (
+                  <Tag color={type === 'PLATFORM' ? 'blue' : 'cyan'} className="text-[11px]">
+                    {type}
+                  </Tag>
+                ),
+              },
+              {
+                title: '总工程师',
+                dataIndex: 'chiefEngineerId',
+                key: 'chiefEngineerId',
+                render: (eng: string) => <span className="text-xs text-slate-500">{eng}</span>,
+              },
+              {
+                title: '操作',
+                key: 'op',
+                render: (_: any, row: ProjectEntity) => (
+                  <Popconfirm
+                    title="确定删除此机床研制项目？"
+                    description={`项目代号: ${row.projectCode}。此操作不可逆！`}
+                    onConfirm={() => handleDeleteProject(row.projectId)}
+                    okText="确定删除"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button danger type="link" size="small" icon={<Trash2 className="w-3.5 h-3.5 inline mr-0.5" />}>
+                      删除项目
+                    </Button>
+                  </Popconfirm>
+                ),
+              },
+            ]}
+          />
+        </div>
+      </Modal>
 
       {/* 弹窗 1: 签署阶段门评审决策 */}
       <Modal

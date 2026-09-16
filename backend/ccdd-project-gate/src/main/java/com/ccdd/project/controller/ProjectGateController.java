@@ -3,10 +3,12 @@ package com.ccdd.project.controller;
 import com.ccdd.common.api.Result;
 import com.ccdd.project.dto.GatePreCheckResultDto;
 import com.ccdd.project.dto.RecordGateDecisionRequest;
+import com.ccdd.project.dto.SaveProjectRequest;
 import com.ccdd.project.dto.TaskCpmAnalysisDto;
 import com.ccdd.project.entity.ActionItemEntity;
 import com.ccdd.project.entity.DeliverableSubmissionEntity;
 import com.ccdd.project.entity.GateDecisionEntity;
+import com.ccdd.project.entity.ProjectEntity;
 import com.ccdd.project.service.ProjectGateService;
 import com.ccdd.project.service.WbsTaskService;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +30,47 @@ public class ProjectGateController {
     public ProjectGateController(ProjectGateService projectGateService, WbsTaskService wbsTaskService) {
         this.projectGateService = projectGateService;
         this.wbsTaskService = wbsTaskService;
+    }
+
+    /**
+     * 获取全部机床研制项目列表
+     */
+    @GetMapping
+    public Result<List<ProjectEntity>> listProjects(
+            @RequestHeader(value = "X-Tenant-Id", defaultValue = "TENANT_DEFAULT") String tenantId) {
+        return Result.success(projectGateService.listProjects(tenantId));
+    }
+
+    /**
+     * 创建机床研制项目
+     */
+    @PostMapping
+    public Result<ProjectEntity> createProject(
+            @RequestHeader(value = "X-Tenant-Id", defaultValue = "TENANT_DEFAULT") String tenantId,
+            @RequestBody SaveProjectRequest request) {
+        return Result.success(projectGateService.createProject(tenantId, request));
+    }
+
+    /**
+     * 修改编辑机床研制项目
+     */
+    @PutMapping("/{projectId}")
+    public Result<ProjectEntity> updateProject(
+            @RequestHeader(value = "X-Tenant-Id", defaultValue = "TENANT_DEFAULT") String tenantId,
+            @PathVariable Long projectId,
+            @RequestBody SaveProjectRequest request) {
+        return Result.success(projectGateService.updateProject(tenantId, projectId, request));
+    }
+
+    /**
+     * 删除机床研制项目
+     */
+    @DeleteMapping("/{projectId}")
+    public Result<String> deleteProject(
+            @RequestHeader(value = "X-Tenant-Id", defaultValue = "TENANT_DEFAULT") String tenantId,
+            @PathVariable Long projectId) {
+        projectGateService.deleteProject(tenantId, projectId);
+        return Result.success("项目删除成功");
     }
 
     /**

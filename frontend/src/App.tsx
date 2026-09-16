@@ -50,7 +50,14 @@ export const App: React.FC = () => {
           />
         );
       case 'project-mgmt':
-        return <ProjectGateManagementPage />;
+      case 'project-mgmt-overview':
+        return <ProjectGateManagementPage activeSubAction="overview" onNavigateSubAction={setActiveTab} />;
+      case 'project-create':
+        return <ProjectGateManagementPage activeSubAction="create" onNavigateSubAction={setActiveTab} />;
+      case 'project-edit':
+        return <ProjectGateManagementPage activeSubAction="edit" onNavigateSubAction={setActiveTab} />;
+      case 'project-delete':
+        return <ProjectGateManagementPage activeSubAction="delete" onNavigateSubAction={setActiveTab} />;
       case 'process-mgmt':
         return (
           <GenericModulePage

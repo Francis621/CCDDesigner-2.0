@@ -22,6 +22,9 @@ import {
   Shield,
   Box,
   LogOut,
+  PlusCircle,
+  Edit3,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore, SecurityClassification } from '@/stores/useAuthStore';
 import { useProjectStore } from '@/stores/useProjectStore';
@@ -100,6 +103,28 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       key: 'project-mgmt',
       icon: <Briefcase className="w-4 h-4" />,
       label: '项目管理',
+      children: [
+        {
+          key: 'project-mgmt-overview',
+          icon: <LayoutDashboard className="w-4 h-4" />,
+          label: '项目与阶段门看板',
+        },
+        {
+          key: 'project-create',
+          icon: <PlusCircle className="w-4 h-4" />,
+          label: '创建项目',
+        },
+        {
+          key: 'project-edit',
+          icon: <Edit3 className="w-4 h-4" />,
+          label: '编辑项目',
+        },
+        {
+          key: 'project-delete',
+          icon: <Trash2 className="w-4 h-4" />,
+          label: '删除项目',
+        },
+      ],
     },
     {
       key: 'process-mgmt',
@@ -205,7 +230,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               theme="dark"
               mode="inline"
               selectedKeys={[currentTab]}
-              defaultOpenKeys={['config-mgmt', 'product-config', 'process-design']}
+              defaultOpenKeys={['project-mgmt', 'config-mgmt', 'product-config', 'process-design']}
               items={menuItems}
               onClick={({ key }) => onTabChange(key)}
               className="bg-transparent border-r-0 text-xs"
