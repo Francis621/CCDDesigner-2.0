@@ -19,6 +19,7 @@
         <module>ccdd-model-flexo</module>
         <module>ccdd-simulation-worker</module>
         <module>ccdd-thread-graph</module>
+        <module>ccdd-bom-engine</module>
         <module>ccdd-application</module>
     </modules>
 
@@ -83,6 +84,11 @@
             <dependency>
                 <groupId>com.ccdd</groupId>
                 <artifactId>ccdd-thread-graph</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ccdd</groupId>
+                <artifactId>ccdd-bom-engine</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
