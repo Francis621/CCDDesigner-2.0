@@ -1,17 +1,22 @@
 package com.ccdd.common.api;
 
-import lombok.Getter;
-
 /**
  * 平台统一业务异常
  */
-@Getter
 public class BusinessException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
     private final int code;
     private final Object errorDetails;
+
+    public int getCode() {
+        return code;
+    }
+
+    public Object getErrorDetails() {
+        return errorDetails;
+    }
 
     public BusinessException(int code, String message) {
         super(message);

@@ -1,53 +1,79 @@
 package com.ccdd.common.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * SysML v2 模型元素全局稳定唯一四元组引用契约
+ * SysML v2 模型元素全局稳定唯一四元组引用契约 (纯原生 Java 实现)
  * 形式化定义: ModelElementRef = <repositoryId, modelProjectId, commitId, elementId>
- * 严禁使用易变的树状显示路径 (displayPath) 作为历史引用键
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class ModelElementRef implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** Flexo 存储库标识 (如 flexo-repo-main) */
     private String repositoryId;
-
-    /** 模型工程标识 (如 p-vmc1000-sys) */
     private String modelProjectId;
-
-    /** 绑定的不可变 Commit ID */
     private String commitId;
-
-    /** 模型内部稳定的元素唯一UUID */
     private String elementId;
-
-    /** 易变的树状显示路径 (仅供 UI 导航和日志阅读，严禁作为业务外键) */
     private String displayPath;
 
-    /**
-     * 序列化为规范统一 URI 格式:
-     * ccdd://flexo/{repositoryId}/{modelProjectId}/{commitId}/{elementId}
-     */
+    public ModelElementRef() {
+    }
+
+    public ModelElementRef(String repositoryId, String modelProjectId, String commitId, String elementId, String displayPath) {
+        this.repositoryId = repositoryId;
+        this.modelProjectId = modelProjectId;
+        this.commitId = commitId;
+        this.elementId = elementId;
+        this.displayPath = displayPath;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String repositoryId;
+        private String modelProjectId;
+        private String commitId;
+        private String elementId;
+        private String displayPath;
+
+        public Builder repositoryId(String repositoryId) {
+            this.repositoryId = repositoryId;
+            return this;
+        }
+
+        public Builder modelProjectId(String modelProjectId) {
+            this.modelProjectId = modelProjectId;
+            return this;
+        }
+
+        public Builder commitId(String commitId) {
+            this.commitId = commitId;
+            return this;
+        }
+
+        public Builder elementId(String elementId) {
+            this.elementId = elementId;
+            return this;
+        }
+
+        public Builder displayPath(String displayPath) {
+            this.displayPath = displayPath;
+            return this;
+        }
+
+        public ModelElementRef build() {
+            return new ModelElementRef(repositoryId, modelProjectId, commitId, elementId, displayPath);
+        }
+    }
+
     public String toGlobalUri() {
         return String.format("ccdd://flexo/%s/%s/%s/%s",
                 repositoryId, modelProjectId, commitId, elementId);
     }
 
-    /**
-     * 从 URI 反解析四元组
-     */
     public static ModelElementRef parseUri(String uri) {
         if (uri == null || !uri.startsWith("ccdd://flexo/")) {
             throw new IllegalArgumentException("非法的 SysML v2 四元组 URI 格式: " + uri);
@@ -63,6 +89,17 @@ public class ModelElementRef implements Serializable {
                 .elementId(parts[3])
                 .build();
     }
+
+    public String getRepositoryId() { return repositoryId; }
+    public void setRepositoryId(String repositoryId) { this.repositoryId = repositoryId; }
+    public String getModelProjectId() { return modelProjectId; }
+    public void setModelProjectId(String modelProjectId) { this.modelProjectId = modelProjectId; }
+    public String getCommitId() { return commitId; }
+    public void setCommitId(String commitId) { this.commitId = commitId; }
+    public String getElementId() { return elementId; }
+    public void setElementId(String elementId) { this.elementId = elementId; }
+    public String getDisplayPath() { return displayPath; }
+    public void setDisplayPath(String displayPath) { this.displayPath = displayPath; }
 
     @Override
     public boolean equals(Object o) {

@@ -20,3 +20,11 @@ logs/
 *.log
 tmp/
 temp/
+
+# Maven 构建产物
+target/
+**/target/
+*.class
+*.jar
+*.war
+
