@@ -6,6 +6,7 @@ import { WorkbenchPage } from './pages/WorkbenchPage';
 import { SuperBomWizardPage } from './pages/SuperBomWizardPage';
 import { ThreadGraphPage } from './pages/ThreadGraphPage';
 import { MbomBalancePage } from './pages/MbomBalancePage';
+import { ProjectGateManagementPage } from './pages/ProjectGateManagementPage';
 import { GenericModulePage } from './pages/GenericModulePage';
 
 export const App: React.FC = () => {
@@ -49,15 +50,7 @@ export const App: React.FC = () => {
           />
         );
       case 'project-mgmt':
-        return (
-          <GenericModulePage
-            moduleKey="project-mgmt"
-            moduleName="项目管理"
-            category="项目控制部"
-            description="全周期跟踪机床正向研制项目进度、WBS甘特图、里程碑门禁及关键路径交付物。"
-            onNavigate={setActiveTab}
-          />
-        );
+        return <ProjectGateManagementPage />;
       case 'process-mgmt':
         return (
           <GenericModulePage

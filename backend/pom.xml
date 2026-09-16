@@ -21,6 +21,7 @@
         <module>ccdd-thread-graph</module>
         <module>ccdd-bom-engine</module>
         <module>ccdd-manufacturing-handoff</module>
+        <module>ccdd-project-gate</module>
         <module>ccdd-application</module>
     </modules>
 
@@ -95,6 +96,11 @@
             <dependency>
                 <groupId>com.ccdd</groupId>
                 <artifactId>ccdd-manufacturing-handoff</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ccdd</groupId>
+                <artifactId>ccdd-project-gate</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
