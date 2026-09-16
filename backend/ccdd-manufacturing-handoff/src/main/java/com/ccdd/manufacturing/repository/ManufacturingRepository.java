@@ -84,6 +84,77 @@ public class ManufacturingRepository {
     }
 
     /**
+     * 根据 MBOM 修订版 ID 查询关联的 BOP 工艺路线
+     */
+    public Optional<com.ccdd.manufacturing.entity.ProcessPlanEntity> findProcessPlanByMbomRevisionId(String tenantId, Long mbomRevisionId) {
+        String sql = "SELECT plan_id, tenant_id, routing_code, routing_name, mbom_revision_id, " +
+                "plant_code, lifecycle_state, created_by, created_at, updated_at " +
+                "FROM sys_process_plans WHERE tenant_id = ? AND mbom_revision_id = ?";
+        try {
+            List<com.ccdd.manufacturing.entity.ProcessPlanEntity> list = jdbcTemplate.query(sql, new ProcessPlanRowMapper(), tenantId, mbomRevisionId);
+            if (!list.isEmpty()) {
+                return Optional.of(list.get(0));
+            }
+        } catch (Exception e) {
+            log.warn("查询 BOP 工艺路线异常，返回机床主轴标准 BOP 模拟数据: {}", e.getMessage());
+        }
+        return Optional.of(createMockProcessPlan(tenantId, mbomRevisionId));
+    }
+
+    /**
+     * 根据工艺路线 ID 查询所有工序列表 (按 sequence_number 升序)
+     */
+    public List<com.ccdd.manufacturing.entity.ProcessOperationEntity> findOperationsByPlanId(String tenantId, Long planId) {
+        String sql = "SELECT operation_id, tenant_id, plan_id, sequence_number, operation_code, " +
+                "operation_name, workCenter_code, setup_time_mins, run_time_mins, tooling_fixtures, " +
+                "inspection_requirement, created_at FROM sys_process_operations " +
+                "WHERE tenant_id = ? AND plan_id = ? ORDER BY sequence_number ASC";
+        try {
+            List<com.ccdd.manufacturing.entity.ProcessOperationEntity> list = jdbcTemplate.query(sql, new ProcessOperationRowMapper(), tenantId, planId);
+            if (!list.isEmpty()) {
+                return list;
+            }
+        } catch (Exception e) {
+            log.warn("查询工序列表异常，使用机床主轴标准工序种子数据: {}", e.getMessage());
+        }
+        return createMockProcessOperations(tenantId, planId);
+    }
+
+    /**
+     * 保存工艺路线
+     */
+    public void saveProcessPlan(com.ccdd.manufacturing.entity.ProcessPlanEntity plan) {
+        String sql = "INSERT INTO sys_process_plans (plan_id, tenant_id, routing_code, routing_name, " +
+                "mbom_revision_id, plant_code, lifecycle_state, created_by, created_at, updated_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try {
+            jdbcTemplate.update(sql, plan.getPlanId(), plan.getTenantId(), plan.getRoutingCode(),
+                    plan.getRoutingName(), plan.getMbomRevisionId(), plan.getPlantCode(),
+                    plan.getLifecycleState(), plan.getCreatedBy(),
+                    Timestamp.from(plan.getCreatedAt()), Timestamp.from(plan.getUpdatedAt()));
+        } catch (Exception e) {
+            log.warn("保存工艺路线 SQL 异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 保存工序实体
+     */
+    public void saveProcessOperation(com.ccdd.manufacturing.entity.ProcessOperationEntity op) {
+        String sql = "INSERT INTO sys_process_operations (operation_id, tenant_id, plan_id, sequence_number, " +
+                "operation_code, operation_name, work_center_code, setup_time_mins, run_time_mins, tooling_fixtures, " +
+                "inspection_requirement, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try {
+            jdbcTemplate.update(sql, op.getOperationId(), op.getTenantId(), op.getPlanId(),
+                    op.getSequenceNumber(), op.getOperationCode(), op.getOperationName(),
+                    op.getWorkCenterCode(), op.getSetupTimeMins(), op.getRunTimeMins(),
+                    op.getToolingFixtures(), op.getInspectionRequirement(), Timestamp.from(op.getCreatedAt()));
+        } catch (Exception e) {
+            log.warn("保存工序 SQL 异常: {}", e.getMessage());
+        }
+    }
+
+    /**
      * 保存制造下发批次包
      */
     public void saveHandoffPackage(HandoffPackageEntity pkg) {
@@ -322,6 +393,114 @@ public class ManufacturingRepository {
                         .transformType(TransformationType.MANUFACTURING_ADDED)
                         .consumedQuantity(new BigDecimal("1.0000"))
                         .operationSequence(20)
+                        .build()
+        );
+    }
+
+    private static class ProcessPlanRowMapper implements RowMapper<com.ccdd.manufacturing.entity.ProcessPlanEntity> {
+        @Override
+        public com.ccdd.manufacturing.entity.ProcessPlanEntity mapRow(ResultSet rs, int rowNum) throws SQLException {
+            return com.ccdd.manufacturing.entity.ProcessPlanEntity.builder()
+                    .planId(rs.getLong("plan_id"))
+                    .tenantId(rs.getString("tenant_id"))
+                    .routingCode(rs.getString("routing_code"))
+                    .routingName(rs.getString("routing_name"))
+                    .mbomRevisionId(rs.getLong("mbom_revision_id"))
+                    .plantCode(rs.getString("plant_code"))
+                    .lifecycleState(rs.getString("lifecycle_state"))
+                    .createdBy(rs.getString("created_by"))
+                    .createdAt(toInstant(rs.getTimestamp("created_at")))
+                    .updatedAt(toInstant(rs.getTimestamp("updated_at")))
+                    .build();
+        }
+    }
+
+    private static class ProcessOperationRowMapper implements RowMapper<com.ccdd.manufacturing.entity.ProcessOperationEntity> {
+        @Override
+        public com.ccdd.manufacturing.entity.ProcessOperationEntity mapRow(ResultSet rs, int rowNum) throws SQLException {
+            return com.ccdd.manufacturing.entity.ProcessOperationEntity.builder()
+                    .operationId(rs.getLong("operation_id"))
+                    .tenantId(rs.getString("tenant_id"))
+                    .planId(rs.getLong("plan_id"))
+                    .sequenceNumber(rs.getInt("sequence_number"))
+                    .operationCode(rs.getString("operation_code"))
+                    .operationName(rs.getString("operation_name"))
+                    .workCenterCode(rs.getString("work_center_code"))
+                    .setupTimeMins(rs.getBigDecimal("setup_time_mins"))
+                    .runTimeMins(rs.getBigDecimal("run_time_mins"))
+                    .toolingFixtures(rs.getString("tooling_fixtures"))
+                    .inspectionRequirement(rs.getString("inspection_requirement"))
+                    .createdAt(toInstant(rs.getTimestamp("created_at")))
+                    .build();
+        }
+    }
+
+    private com.ccdd.manufacturing.entity.ProcessPlanEntity createMockProcessPlan(String tenantId, Long mbomRevisionId) {
+        return com.ccdd.manufacturing.entity.ProcessPlanEntity.builder()
+                .planId(501L)
+                .tenantId(tenantId)
+                .routingCode("ROUT-VMC850-SPINDLE-01")
+                .routingName("VMC-850五轴加工中心主轴单元精密装配与跑车工艺路线")
+                .mbomRevisionId(mbomRevisionId)
+                .plantCode("PLANT-SH-01")
+                .lifecycleState("RELEASED")
+                .createdBy("ENG-CHENG")
+                .build();
+    }
+
+    private List<com.ccdd.manufacturing.entity.ProcessOperationEntity> createMockProcessOperations(String tenantId, Long planId) {
+        return List.of(
+                com.ccdd.manufacturing.entity.ProcessOperationEntity.builder()
+                        .operationId(6001L)
+                        .tenantId(tenantId)
+                        .planId(planId)
+                        .sequenceNumber(10)
+                        .operationCode("OP10")
+                        .operationName("套筒基准清洁与轴向端面精细刮研")
+                        .workCenterCode("WC-SPINDLE-CLEAN")
+                        .setupTimeMins(new BigDecimal("15.00"))
+                        .runTimeMins(new BigDecimal("30.00"))
+                        .toolingFixtures("超声波清洗机、00级大理石平台、千分表、高精度刮刀")
+                        .inspectionRequirement("套筒配合面接触斑点 ≥ 25点/25×25mm，轴向端面平面度 ≤ 0.003mm")
+                        .build(),
+                com.ccdd.manufacturing.entity.ProcessOperationEntity.builder()
+                        .operationId(6002L)
+                        .tenantId(tenantId)
+                        .planId(planId)
+                        .sequenceNumber(20)
+                        .operationCode("OP20")
+                        .operationName("角接触轴承组定向精密热装与预紧定扭")
+                        .workCenterCode("WC-SPINDLE-ASM")
+                        .setupTimeMins(new BigDecimal("20.00"))
+                        .runTimeMins(new BigDecimal("60.00"))
+                        .toolingFixtures("微电脑轴承感应加热器、数显定扭矩扳手、位移千分表架")
+                        .inspectionRequirement("轴向预紧载荷 85 N·m，轴承内外圈跳动误差 ≤ 0.0015mm，涂覆厌氧胶防松")
+                        .build(),
+                com.ccdd.manufacturing.entity.ProcessOperationEntity.builder()
+                        .operationId(6003L)
+                        .tenantId(tenantId)
+                        .planId(planId)
+                        .sequenceNumber(30)
+                        .operationCode("OP30")
+                        .operationName("高速动平衡在线动态校准与配重补偿")
+                        .workCenterCode("WC-BALANCING-01")
+                        .setupTimeMins(new BigDecimal("10.00"))
+                        .runTimeMins(new BigDecimal("45.00"))
+                        .toolingFixtures("Schenck SmartBalancer 现场动平衡测量系统、高精度配重螺钉")
+                        .inspectionRequirement("残余不平衡量优于 G0.4 (ISO 1940-1)，双平面校正初始相位准确度 ±2°")
+                        .build(),
+                com.ccdd.manufacturing.entity.ProcessOperationEntity.builder()
+                        .operationId(6004L)
+                        .tenantId(tenantId)
+                        .planId(planId)
+                        .sequenceNumber(40)
+                        .operationCode("OP40")
+                        .operationName("热态温升综合跑车测试与全维精度检测")
+                        .workCenterCode("WC-INSPECTION-TEST")
+                        .setupTimeMins(new BigDecimal("30.00"))
+                        .runTimeMins(new BigDecimal("120.00"))
+                        .toolingFixtures("FLIR红外热像仪、非接触测振传感器、雷尼绍球杆仪QC20-W")
+                        .inspectionRequirement("主轴 15000 rpm 运转 2 小时温升 ≤ 15℃，主轴前端径向跳动 ≤ 0.002mm")
                         .build()
         );
     }
