@@ -28,3 +28,15 @@ target/
 *.jar
 *.war
 
+# 前端构建产物与依赖
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
+
+
+
