@@ -14,16 +14,18 @@ public class EngineeringContext implements Serializable {
     private String projectId;
     private String targetRevisionRef;
     private String operatorUserId;
+    private String securityClearance; // PUBLIC, INTERNAL, CONFIDENTIAL, STRICTLY_CONFIDENTIAL
     private ConfigurationContext configurationContext;
 
     public EngineeringContext() {
     }
 
-    public EngineeringContext(String tenantId, String projectId, String targetRevisionRef, String operatorUserId, ConfigurationContext configurationContext) {
+    public EngineeringContext(String tenantId, String projectId, String targetRevisionRef, String operatorUserId, String securityClearance, ConfigurationContext configurationContext) {
         this.tenantId = tenantId;
         this.projectId = projectId;
         this.targetRevisionRef = targetRevisionRef;
         this.operatorUserId = operatorUserId;
+        this.securityClearance = securityClearance;
         this.configurationContext = configurationContext;
     }
 
@@ -36,6 +38,7 @@ public class EngineeringContext implements Serializable {
         private String projectId;
         private String targetRevisionRef;
         private String operatorUserId;
+        private String securityClearance;
         private ConfigurationContext configurationContext;
 
         public Builder tenantId(String tenantId) {
@@ -58,13 +61,18 @@ public class EngineeringContext implements Serializable {
             return this;
         }
 
+        public Builder securityClearance(String securityClearance) {
+            this.securityClearance = securityClearance;
+            return this;
+        }
+
         public Builder configurationContext(ConfigurationContext configurationContext) {
             this.configurationContext = configurationContext;
             return this;
         }
 
         public EngineeringContext build() {
-            return new EngineeringContext(tenantId, projectId, targetRevisionRef, operatorUserId, configurationContext);
+            return new EngineeringContext(tenantId, projectId, targetRevisionRef, operatorUserId, securityClearance, configurationContext);
         }
     }
 
@@ -129,6 +137,8 @@ public class EngineeringContext implements Serializable {
     public void setTargetRevisionRef(String targetRevisionRef) { this.targetRevisionRef = targetRevisionRef; }
     public String getOperatorUserId() { return operatorUserId; }
     public void setOperatorUserId(String operatorUserId) { this.operatorUserId = operatorUserId; }
+    public String getSecurityClearance() { return securityClearance; }
+    public void setSecurityClearance(String securityClearance) { this.securityClearance = securityClearance; }
     public ConfigurationContext getConfigurationContext() { return configurationContext; }
     public void setConfigurationContext(ConfigurationContext configurationContext) { this.configurationContext = configurationContext; }
 }

@@ -27,6 +27,18 @@
             <artifactId>ccdd-model-flexo</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-security-pbac</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-storage-minio</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-thread-graph</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>

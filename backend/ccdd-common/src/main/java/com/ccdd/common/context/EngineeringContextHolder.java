@@ -25,6 +25,16 @@ public class EngineeringContextHolder {
         return ctx != null ? ctx.getProjectId() : null;
     }
 
+    public static String getUserId() {
+        EngineeringContext ctx = getContext();
+        return ctx != null ? ctx.getOperatorUserId() : null;
+    }
+
+    public static String getSecurityClearance() {
+        EngineeringContext ctx = getContext();
+        return ctx != null ? ctx.getSecurityClearance() : null;
+    }
+
     public static void clear() {
         CONTEXT_HOLDER.remove();
     }
