@@ -43,6 +43,10 @@
             <artifactId>ccdd-bom-engine</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-manufacturing-handoff</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>

@@ -20,6 +20,7 @@
         <module>ccdd-simulation-worker</module>
         <module>ccdd-thread-graph</module>
         <module>ccdd-bom-engine</module>
+        <module>ccdd-manufacturing-handoff</module>
         <module>ccdd-application</module>
     </modules>
 
@@ -91,6 +92,11 @@
                 <artifactId>ccdd-bom-engine</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.ccdd</groupId>
+                <artifactId>ccdd-manufacturing-handoff</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- Flyway 数据库迁移管理 -->
             <dependency>
@@ -144,6 +150,11 @@
                 <configuration>
                     <release>17</release>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
             </plugin>
         </plugins>
     </build>
