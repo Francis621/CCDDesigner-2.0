@@ -8,6 +8,7 @@ import { ThreadGraphPage } from './pages/ThreadGraphPage';
 import { MbomBalancePage } from './pages/MbomBalancePage';
 import { ProjectGateManagementPage } from './pages/ProjectGateManagementPage';
 import { DocumentManagementPage } from './pages/DocumentManagementPage';
+import { BaselineManagementPage } from './pages/BaselineManagementPage';
 import { GenericModulePage } from './pages/GenericModulePage';
 
 export const App: React.FC = () => {
@@ -113,15 +114,7 @@ export const App: React.FC = () => {
 
       // 闭环管控
       case 'baseline-mgmt':
-        return (
-          <GenericModulePage
-            moduleKey="baseline-mgmt"
-            moduleName="基线管理"
-            category="配置控制部"
-            description="冻结设计/工艺工程基线，严格管理基线版本比对、锁定标志位及下发凭据凭证。"
-            onNavigate={setActiveTab}
-          />
-        );
+        return <BaselineManagementPage />;
       case 'change-mgmt':
         return (
           <GenericModulePage

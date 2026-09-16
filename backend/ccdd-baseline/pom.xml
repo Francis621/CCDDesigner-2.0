@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ccdd</groupId>
+        <artifactId>ccdd-parent</artifactId>
+        <version>2.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ccdd-baseline</artifactId>
+    <name>CCDDesigner 2.0 - Baseline &amp; Configuration Management (M21)</name>
+    <description>M21 基线与配置状态微服务组件：全要素闭包拓扑冻结、只读防篡改、红线比对与多形态解耦</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-project-gate</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-document-mgmt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-storage-minio</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
