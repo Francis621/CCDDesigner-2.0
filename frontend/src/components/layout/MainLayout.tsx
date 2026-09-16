@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Dropdown, MenuProps, Tag, Tooltip } from 'antd';
+import { Layout, Menu, Dropdown, MenuProps, Tag, Tooltip, message } from 'antd';
 import {
   LayoutDashboard,
   Mail,
@@ -27,6 +27,9 @@ import {
   Trash2,
   UploadCloud,
   FolderArchive,
+  Users,
+  UserCheck,
+  Lock,
 } from 'lucide-react';
 import { useAuthStore, SecurityClassification } from '@/stores/useAuthStore';
 import { useProjectStore } from '@/stores/useProjectStore';
@@ -45,8 +48,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, setSecurityClearance } = useAuthStore();
+  const { user, setSecurityClearance, switchRole, isAdmin } = useAuthStore();
   const { currentProject } = useProjectStore();
+  const isSystemAdmin = isAdmin();
 
   const securityMenuItems: MenuProps['items'] = [
     { key: 'PUBLIC', label: '公开 (PUBLIC)' },
@@ -55,6 +59,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     { key: 'CONFIDENTIAL', label: '机密 (CONFIDENTIAL)' },
     { key: 'TOP_SECRET', label: '绝密 (TOP_SECRET)' },
   ];
+
+  const roleMenuItems: MenuProps['items'] = [
+    { key: 'SystemAdmin', label: '👑 系统管理员 (admin) [具备系统设置与用户管理权]' },
+    { key: 'ChiefMechanicalEngineer', label: '🛠️ 机械总工 (张建国) [普通工程设计角色]' },
+    { key: 'QualityOfficer', label: '📋 专职审查员 (赵晓华) [具备PASS验证审查资质]' },
+    { key: 'SimulationEngineer', label: '⚡ 仿真工程师 (王强) [数字化仿真计算角色]' },
+  ];
+
+  const handleRoleChange: MenuProps['onClick'] = ({ key }) => {
+    switchRole(key as any);
+    message.success(`已切换当前登录身份为: ${key === 'SystemAdmin' ? '系统管理员 (具备运维配置权)' : key}`);
+  };
 
   const handleSecurityChange: MenuProps['onClick'] = ({ key }) => {
     setSecurityClearance(key as SecurityClassification);
@@ -216,7 +232,42 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         },
       ],
     },
+    {
+      type: 'divider',
+      className: 'bg-slate-800 my-2',
+    },
+    {
+      key: 'system-settings',
+      icon: <Settings className="w-4 h-4 text-slate-300" />,
+      label: (
+        <span className="flex items-center justify-between">
+          <span>系统设置</span>
+          {!isSystemAdmin && <Lock className="w-3 h-3 text-amber-400 ml-1" />}
+        </span>
+      ),
+      children: [
+        {
+          key: 'user-mgmt',
+          icon: <Users className="w-4 h-4 text-blue-400" />,
+          label: (
+            <span className="flex items-center justify-between">
+              <span>用户管理</span>
+              {!isSystemAdmin && <Tag color="warning" className="text-[10px] scale-90 m-0">仅管理员</Tag>}
+            </span>
+          ),
+        },
+      ],
+    },
   ];
+
+  const handleMenuClick = ({ key }: { key: string }) => {
+    if (key === 'system-settings' || key === 'user-mgmt') {
+      if (!isSystemAdmin) {
+        message.warning('权限提示：系统设置与用户管理功能受安全策略 (SoD-04) 约束，仅限系统管理员 (SystemAdmin) 访问！');
+      }
+    }
+    onTabChange(key);
+  };
 
   return (
     <Layout className="min-h-screen">
@@ -251,7 +302,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               selectedKeys={[currentTab]}
               defaultOpenKeys={['project-mgmt', 'config-mgmt', 'product-config', 'process-design', 'document-mgmt']}
               items={menuItems}
-              onClick={({ key }) => onTabChange(key)}
+              onClick={handleMenuClick}
               className="bg-transparent border-r-0 text-xs"
             />
           </div>
@@ -281,12 +332,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* 演示用角色切换控件 */}
+            <Dropdown menu={{ items: roleMenuItems, onClick: handleRoleChange }}>
+              <div className="flex items-center gap-1.5 cursor-pointer bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-200">
+                <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-semibold text-blue-700 hidden md:inline">当前身份:</span>
+                <Tag color={isSystemAdmin ? 'blue' : 'gold'} className="m-0 text-xs font-bold">
+                  {isSystemAdmin ? '👑 系统管理员' : user.realName}
+                </Tag>
+              </div>
+            </Dropdown>
+
             {/* Bell-LaPadula 密级切换控制器 */}
             <Dropdown menu={{ items: securityMenuItems, onClick: handleSecurityChange }}>
               <div className="flex items-center gap-1.5 cursor-pointer bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors border border-slate-300">
                 <Shield className="w-3.5 h-3.5 text-slate-600" />
-                <span className="text-xs font-semibold text-slate-700">当前密级:</span>
+                <span className="text-xs font-semibold text-slate-700 hidden md:inline">密级:</span>
                 <Tag color={getSecurityBadgeColor(user.securityClearance)} className="m-0 text-xs font-bold">
                   {user.securityClearance}
                 </Tag>
@@ -294,8 +356,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             </Dropdown>
 
             {/* 用户身份与岗位 */}
-            <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
-              <div className="text-right">
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="text-right hidden sm:block">
                 <div className="text-xs font-bold text-slate-800">{user.realName}</div>
                 <div className="text-[10px] text-slate-500">{user.role}</div>
               </div>

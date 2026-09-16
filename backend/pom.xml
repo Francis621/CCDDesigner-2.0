@@ -25,6 +25,7 @@
         <module>ccdd-document-mgmt</module>
         <module>ccdd-baseline</module>
         <module>ccdd-change-mgmt</module>
+        <module>ccdd-iam</module>
         <module>ccdd-application</module>
     </modules>
 
@@ -119,6 +120,11 @@
             <dependency>
                 <groupId>com.ccdd</groupId>
                 <artifactId>ccdd-change-mgmt</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ccdd</groupId>
+                <artifactId>ccdd-iam</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

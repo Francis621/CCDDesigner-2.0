@@ -10,6 +10,7 @@ import { ProjectGateManagementPage } from './pages/ProjectGateManagementPage';
 import { DocumentManagementPage } from './pages/DocumentManagementPage';
 import { BaselineManagementPage } from './pages/BaselineManagementPage';
 import { ChangeManagementPage } from './pages/ChangeManagementPage';
+import { UserManagementPage } from './pages/UserManagementPage';
 import { GenericModulePage } from './pages/GenericModulePage';
 
 export const App: React.FC = () => {
@@ -124,6 +125,11 @@ export const App: React.FC = () => {
       case 'document-upload':
       case 'document-export':
         return <DocumentManagementPage />;
+
+      // 系统设置与用户管理 (管理员专区)
+      case 'system-settings':
+      case 'user-mgmt':
+        return <UserManagementPage />;
 
       default:
         return <WorkbenchPage onNavigate={(tab) => setActiveTab(tab)} />;
