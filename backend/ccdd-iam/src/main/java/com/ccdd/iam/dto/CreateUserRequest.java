@@ -15,6 +15,7 @@ public class CreateUserRequest {
     private String mobile;
     private Boolean isExternal;
     private List<String> roleIds;
+    private String password;
 
     public CreateUserRequest() {
     }
@@ -81,5 +82,13 @@ public class CreateUserRequest {
 
     public void setRoleIds(List<String> roleIds) {
         this.roleIds = roleIds;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

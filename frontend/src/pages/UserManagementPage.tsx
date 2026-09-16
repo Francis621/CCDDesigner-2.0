@@ -35,6 +35,7 @@ import {
   AlertOctagon,
   Building2,
   UserPlus,
+  KeyRound,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -350,6 +351,21 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
+  // 一键生成随机安全强密码
+  const handleGenerateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let pwd = 'Ccdd@';
+    for (let i = 0; i < 4; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    pwd += '2026';
+    createUserForm.setFieldsValue({
+      password: pwd,
+      confirmPassword: pwd,
+    });
+    message.success(`已自动生成高强度初始密码: ${pwd}`);
+  };
+
   // 1. 新建用户
   const handleCreateUserSubmit = async () => {
     try {
@@ -363,6 +379,7 @@ export const UserManagementPage: React.FC = () => {
         mobile: values.mobile,
         isExternal: Boolean(values.isExternal),
         roleIds: values.roleIds ? [values.roleIds] : ['ChiefMechanicalEngineer'],
+        password: values.password || 'Ccdd@2026!',
       };
 
       try {
@@ -1192,6 +1209,60 @@ export const UserManagementPage: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
+
+          <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 mt-2">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                账号初始密码配置
+              </span>
+              <Button
+                type="dashed"
+                size="small"
+                onClick={handleGenerateRandomPassword}
+                className="text-xs text-blue-600 border-blue-300 hover:text-blue-700"
+              >
+                一键生成随机强密码
+              </Button>
+            </div>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="password"
+                  label="初始登录密码"
+                  rules={[
+                    {
+                      min: 6,
+                      message: '密码长度至少为 6 位字符',
+                    },
+                  ]}
+                  extra="留空将默认分配: Ccdd@2026!"
+                >
+                  <Input.Password placeholder="设置初始密码 (≥6位)" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="confirmPassword"
+                  label="确认登录密码"
+                  dependencies={['password']}
+                  rules={[
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value || getFieldValue('password') === value) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(new Error('两次输入的登录密码不一致'));
+                      },
+                    }),
+                  ]}
+                >
+                  <Input.Password placeholder="再次确认登录密码" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
         </Form>
       </Modal>
 

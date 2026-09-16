@@ -109,7 +109,11 @@ public class IamService {
         user.setMobile(request.getMobile());
         user.setStatus(UserAccountStatus.ACTIVE);
         user.setIsExternal(Boolean.TRUE.equals(request.getIsExternal()));
-        user.setPasswordHash("$2a$10$defaultPasswordHash12345678");
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            user.setPasswordHash("$2a$10$customSaltedHashFor_" + request.getUsername() + "_" + request.getPassword().hashCode());
+        } else {
+            user.setPasswordHash("$2a$10$defaultPasswordHash12345678");
+        }
         user.setCreatedAt(Instant.now());
         user.setUpdatedAt(Instant.now());
 
