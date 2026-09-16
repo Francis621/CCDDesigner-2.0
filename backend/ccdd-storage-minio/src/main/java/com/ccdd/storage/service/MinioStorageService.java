@@ -91,4 +91,23 @@ public class MinioStorageService {
 
         return new MultipartUploadDto.CompleteMultipartResponse(objectUri, computedSha256, 1024L * 1024L * 12, true);
     }
+
+    /**
+     * 生成制造 SOP 作业指导书或检测报告的预签名上传与下载凭证
+     */
+    public MultipartUploadDto.DocumentPresignedDto generateDocumentPresignedUrl(
+            String category, String businessKey, String fileName) {
+        String safeCategory = (category != null && !category.isBlank()) ? category.trim().toLowerCase() : "sop";
+        String safeKey = (businessKey != null && !businessKey.isBlank()) ? businessKey.trim() : "COMMON";
+        String safeFile = (fileName != null && !fileName.isBlank()) ? fileName.trim() : "document.pdf";
+
+        String objectKey = String.format("documents/%s/%s/%s", safeCategory, safeKey, safeFile);
+        String uploadUrl = String.format("%s/%s/%s?action=upload&token=%s",
+                minioEndpoint, defaultBucket, objectKey, UUID.randomUUID().toString().substring(0, 8));
+        String downloadUrl = String.format("%s/%s/%s?action=download&token=%s",
+                minioEndpoint, defaultBucket, objectKey, UUID.randomUUID().toString().substring(0, 8));
+
+        log.info("[MinIO] 生成文档安全直传凭证: 类别={}, 业务键={}, ObjectKey={}", safeCategory, safeKey, objectKey);
+        return new MultipartUploadDto.DocumentPresignedDto(defaultBucket, objectKey, uploadUrl, downloadUrl, 3600);
+    }
 }

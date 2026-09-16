@@ -131,4 +131,34 @@ public class MultipartUploadDto {
         public boolean isIntegrityVerified() { return integrityVerified; }
         public void setIntegrityVerified(boolean integrityVerified) { this.integrityVerified = integrityVerified; }
     }
+
+    public static class DocumentPresignedDto implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private String bucketName;
+        private String objectKey;
+        private String uploadUrl;
+        private String downloadUrl;
+        private int expiresInSeconds;
+
+        public DocumentPresignedDto() {}
+
+        public DocumentPresignedDto(String bucketName, String objectKey, String uploadUrl, String downloadUrl, int expiresInSeconds) {
+            this.bucketName = bucketName;
+            this.objectKey = objectKey;
+            this.uploadUrl = uploadUrl;
+            this.downloadUrl = downloadUrl;
+            this.expiresInSeconds = expiresInSeconds;
+        }
+
+        public String getBucketName() { return bucketName; }
+        public void setBucketName(String bucketName) { this.bucketName = bucketName; }
+        public String getObjectKey() { return objectKey; }
+        public void setObjectKey(String objectKey) { this.objectKey = objectKey; }
+        public String getUploadUrl() { return uploadUrl; }
+        public void setUploadUrl(String uploadUrl) { this.uploadUrl = uploadUrl; }
+        public String getDownloadUrl() { return downloadUrl; }
+        public void setDownloadUrl(String downloadUrl) { this.downloadUrl = downloadUrl; }
+        public int getExpiresInSeconds() { return expiresInSeconds; }
+        public void setExpiresInSeconds(int expiresInSeconds) { this.expiresInSeconds = expiresInSeconds; }
+    }
 }

@@ -52,4 +52,16 @@ public class StorageController {
         CadGeometryAttributes attributes = cadMetadataExtractor.extractAttributes(fileName, new byte[0]);
         return Result.success(attributes);
     }
+
+    /**
+     * 获取制造工艺卡 SOP 或检测报告的安全预签名上传/下载凭证
+     */
+    @GetMapping("/documents/presigned-url")
+    public Result<MultipartUploadDto.DocumentPresignedDto> getDocumentPresignedUrl(
+            @RequestParam(value = "category", defaultValue = "sop") String category,
+            @RequestParam(value = "businessKey", defaultValue = "OP10") String businessKey,
+            @RequestParam(value = "fileName", defaultValue = "sop.pdf") String fileName) {
+        MultipartUploadDto.DocumentPresignedDto dto = storageService.generateDocumentPresignedUrl(category, businessKey, fileName);
+        return Result.success(dto);
+    }
 }

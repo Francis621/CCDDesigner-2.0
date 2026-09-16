@@ -1,84 +1,135 @@
 import React, { useState } from 'react';
-import { Card, Tag, Button, Drawer, Badge } from 'antd';
+import { Card, Tag, Button, Drawer, Badge, Descriptions } from 'antd';
 import {
   GitFork,
   Radio,
   FileText,
   Boxes,
-  Activity,
-  Factory,
-  AlertTriangle,
+  Layers,
   RotateCcw,
   Sparkles,
   Search,
+  Database,
+  Send,
+  CheckCircle2,
+  GitCommit,
+  ShieldCheck,
+  ArrowDown,
 } from 'lucide-react';
 
-interface ThreadNode {
+export type NodeType =
+  | 'REQUIREMENT'
+  | 'SYSML_BLOCK'
+  | 'CAD_MODEL'
+  | 'EBOM_REV'
+  | 'MBOM_REV'
+  | 'BOP_ROUTING'
+  | 'HANDOFF_PKG'
+  | 'RECEIPT_RECONCILIATION';
+
+export interface ThreadNode {
   id: string;
   urn: string;
   name: string;
-  type: 'REQUIREMENT' | 'SYSML_BLOCK' | 'CAD_MODEL' | 'SIM_CASE' | 'MBOM_OP';
-  status: 'RELEASED' | 'IN_WORK' | 'LOCKED';
+  type: NodeType;
+  status: 'RELEASED' | 'IN_WORK' | 'LOCKED' | 'CLOSED';
   riskScore?: number;
   isImpacted?: boolean;
   level: number;
+  domainDept: string;
+  extraDetails?: {
+    digestSha256?: string;
+    batchNo?: string;
+    balanceVerified?: boolean;
+    operationCount?: number;
+    receiptRatio?: string;
+  };
 }
 
-const INITIAL_NODES: ThreadNode[] = [
+const INITIAL_THREAD_NODES: ThreadNode[] = [
   {
     id: 'N1',
     urn: 'urn:ccdd:req:REQ-001',
-    name: '【需求】机床主轴最大回转速度与动平衡指标 (≥12000 RPM, G1.0)',
+    name: '【需求指标】机床主轴额定转速≥12000 RPM与动平衡G0.4精度',
     type: 'REQUIREMENT',
     status: 'RELEASED',
     level: 1,
+    domainDept: '研发总体部',
   },
   {
     id: 'N2',
-    urn: 'urn:ccdd:sysml:block:spindle-assembly',
-    name: '【架构】SysML v2 直联主轴核心功能块 (SpindleUnit)',
+    urn: 'urn:ccdd:sysml:SpindleAssembly',
+    name: '【SysML架构】直联主轴总成物理逻辑块 (SpindleUnit)',
     type: 'SYSML_BLOCK',
     status: 'RELEASED',
     level: 2,
+    domainDept: '系统架构室',
   },
   {
     id: 'N3',
-    urn: 'urn:ccdd:cad:part:CAD-850-SPN-BOX',
-    name: '【三维CAD】主轴箱体结构三维轻量化模型 (STEP/3DTiles)',
-    type: 'CAD_MODEL',
-    status: 'LOCKED',
+    urn: 'urn:ccdd:ebom:EBOM-VMC850-REV01',
+    name: '【设计工程BOM】VMC-850五轴加工中心主轴单元设计BOM (16螺钉/4轴承/2传感器)',
+    type: 'EBOM_REV',
+    status: 'RELEASED',
     level: 3,
+    domainDept: '机械工程设计部',
+    extraDetails: {
+      digestSha256: 'a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0',
+    },
   },
   {
     id: 'N4',
-    urn: 'urn:ccdd:sim:SIM-THERMAL-01',
-    name: '【仿真验证】主轴高转速瞬态热力学有限元热变形仿真工况',
-    type: 'SIM_CASE',
+    urn: 'urn:ccdd:mbom:MBOM-VMC850-REV01',
+    name: '【制造工程BOM】车间MBOM拆分重组 (物料100%消耗守恒, 残差Residual=0)',
+    type: 'MBOM_REV',
     status: 'RELEASED',
-    level: 3,
+    level: 4,
+    domainDept: '工艺规划部',
+    extraDetails: {
+      balanceVerified: true,
+    },
   },
   {
     id: 'N5',
-    urn: 'urn:ccdd:mbom:op:OP10-BORING',
-    name: '【制造工艺】车间装配工位 OP10: 主轴箱精密镗孔与基准刮研',
-    type: 'MBOM_OP',
-    status: 'IN_WORK',
-    level: 4,
+    urn: 'urn:ccdd:bop:ROUT-VMC850-SPINDLE-01',
+    name: '【BOP工艺路线】主轴精密刮研装配与15000rpm跑车路线 (4工序无环拓扑)',
+    type: 'BOP_ROUTING',
+    status: 'RELEASED',
+    level: 5,
+    domainDept: '装配工艺组',
+    extraDetails: {
+      operationCount: 4,
+    },
   },
   {
     id: 'N6',
-    urn: 'urn:ccdd:mbom:op:OP30-BALANCING',
-    name: '【制造工艺】车间装配工位 OP30: 整机动平衡现场测试与校准',
-    type: 'MBOM_OP',
-    status: 'IN_WORK',
-    level: 4,
+    urn: 'urn:ccdd:handoff:DISPATCH-20260916-VMC850-01',
+    name: '【制造下发批次】MES车间工单发件箱 (含全包SHA-256数字签名与MRR签署)',
+    type: 'HANDOFF_PKG',
+    status: 'RELEASED',
+    level: 6,
+    domainDept: '生产计划科 (MES集成)',
+    extraDetails: {
+      batchNo: 'DISPATCH-20260916-VMC850-01',
+      digestSha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+    },
+  },
+  {
+    id: 'N7',
+    urn: 'urn:ccdd:receipt:RECONCILED-CONFIRMED',
+    name: '【MES回执对账闭环】4/4项物料逐项库位核收无误 (RECONCILED_CONFIRMED)',
+    type: 'RECEIPT_RECONCILIATION',
+    status: 'CLOSED',
+    level: 6,
+    domainDept: '智能装配车间现场',
+    extraDetails: {
+      receiptRatio: '4 / 4 100% 收讫',
+    },
   },
 ];
 
-
-
 export const ThreadGraphPage: React.FC = () => {
-  const [nodes, setNodes] = useState<ThreadNode[]>(INITIAL_NODES);
+  const [nodes, setNodes] = useState<ThreadNode[]>(INITIAL_THREAD_NODES);
   const [selectedNode, setSelectedNode] = useState<ThreadNode | null>(null);
   const [isImpactMode, setIsImpactMode] = useState<boolean>(false);
   const [impactDrawerVisible, setImpactDrawerVisible] = useState<boolean>(false);
@@ -91,25 +142,37 @@ export const ThreadGraphPage: React.FC = () => {
         return <Boxes className="w-4 h-4 text-purple-500" />;
       case 'CAD_MODEL':
         return <Radio className="w-4 h-4 text-amber-500" />;
-      case 'SIM_CASE':
-        return <Activity className="w-4 h-4 text-emerald-500" />;
-      case 'MBOM_OP':
-        return <Factory className="w-4 h-4 text-cyan-500" />;
+      case 'EBOM_REV':
+        return <Database className="w-4 h-4 text-indigo-500" />;
+      case 'MBOM_REV':
+        return <Layers className="w-4 h-4 text-emerald-500" />;
+      case 'BOP_ROUTING':
+        return <GitCommit className="w-4 h-4 text-cyan-500" />;
+      case 'HANDOFF_PKG':
+        return <Send className="w-4 h-4 text-orange-500" />;
+      case 'RECEIPT_RECONCILIATION':
+        return <CheckCircle2 className="w-4 h-4 text-teal-500" />;
     }
   };
 
-  const getNodeTypeLabel = (type: ThreadNode['type']) => {
+  const getNodeTypeTag = (type: ThreadNode['type']) => {
     switch (type) {
       case 'REQUIREMENT':
-        return '顶层需求';
+        return <Tag color="blue">顶层需求</Tag>;
       case 'SYSML_BLOCK':
-        return 'SysML 构件';
+        return <Tag color="purple">SysML架构</Tag>;
       case 'CAD_MODEL':
-        return 'CAD 制品';
-      case 'SIM_CASE':
-        return '仿真工况';
-      case 'MBOM_OP':
-        return '制造工艺';
+        return <Tag color="gold">CAD三维</Tag>;
+      case 'EBOM_REV':
+        return <Tag color="geekblue">设计 EBOM</Tag>;
+      case 'MBOM_REV':
+        return <Tag color="green">制造 MBOM (守恒)</Tag>;
+      case 'BOP_ROUTING':
+        return <Tag color="cyan">BOP工艺路线</Tag>;
+      case 'HANDOFF_PKG':
+        return <Tag color="volcano">制造下发包 (SHA-256)</Tag>;
+      case 'RECEIPT_RECONCILIATION':
+        return <Tag color="success">MES对账闭环</Tag>;
     }
   };
 
@@ -119,11 +182,11 @@ export const ThreadGraphPage: React.FC = () => {
     setNodes((prev) =>
       prev.map((n) => {
         if (n.id === rootId) {
-          return { ...n, isImpacted: true, riskScore: 95 };
+          return { ...n, isImpacted: true, riskScore: 98 };
         }
-        // 下游波及 N2 -> N3, N4, N5, N6
-        if (['N3', 'N4', 'N5', 'N6'].includes(n.id)) {
-          return { ...n, isImpacted: true, riskScore: 78 };
+        // 下游波及 N2 -> N3 -> N4 -> N5 -> N6 -> N7
+        if (['N3', 'N4', 'N5', 'N6', 'N7'].includes(n.id)) {
+          return { ...n, isImpacted: true, riskScore: 85 };
         }
         return { ...n, isImpacted: false, riskScore: 0 };
       })
@@ -134,7 +197,7 @@ export const ThreadGraphPage: React.FC = () => {
   // 重置推演模式
   const resetImpactAnalysis = () => {
     setIsImpactMode(false);
-    setNodes(INITIAL_NODES);
+    setNodes(INITIAL_THREAD_NODES);
     setImpactDrawerVisible(false);
   };
 
@@ -152,7 +215,7 @@ export const ThreadGraphPage: React.FC = () => {
             </h1>
           </div>
           <p className="text-sm text-slate-500 mt-1 m-0">
-            基于 PostgreSQL 递归图遍历（D07 规格），打通需求、架构、三维模型、仿真计算与车间制造工位的全域因果网络。
+            落实 D07/D08 规格：打通【需求 ➔ 架构 ➔ EBOM ➔ MBOM ➔ BOP ➔ 制造下发批次 ➔ MES对账闭环】的 6 级端到端穿透因果拓扑图。
           </p>
         </div>
 
@@ -188,263 +251,172 @@ export const ThreadGraphPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Search className="w-4 h-4 text-slate-400" />
-              <span>拓扑图交互视口 (支持 LOD 视口缩放与下钻)</span>
+              <span>数字主线因果全景拓扑视口</span>
               {isImpactMode && (
-                <Tag color="error" className="animate-pulse-slow font-bold">
-                  ● 变更波及高危预警中
+                <Tag color="error" className="font-bold">
+                  ● 变更波及高危预警中 (影响下游设计BOM、工艺及下发批次)
                 </Tag>
               )}
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> 需求
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span> 架构
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> CAD
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> 仿真
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 inline-block"></span> MBOM
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> 100% 来源严密追溯
               </span>
             </div>
           </div>
         }
       >
-        <div className="py-8 px-4 flex flex-col items-center gap-8 min-h-[460px] justify-center relative">
-          {/* 层级 1: 需求层 */}
-          <div className="flex justify-center w-full">
-            {nodes
-              .filter((n) => n.level === 1)
-              .map((node) => (
-                <div
-                  key={node.id}
-                  onClick={() => setSelectedNode(node)}
-                  className={`p-4 rounded-xl border-2 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer max-w-md ${
-                    node.isImpacted
-                      ? 'border-red-500 ring-4 ring-red-100'
-                      : 'border-blue-400 hover:border-blue-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3 mb-1">
-                    <div className="flex items-center gap-2">
-                      {getNodeIcon(node.type)}
-                      <Tag color="blue">{getNodeTypeLabel(node.type)}</Tag>
+        <div className="py-6 px-4 flex flex-col items-center gap-4 min-h-[520px] justify-center relative">
+          {/* 渲染各层级 */}
+          {[1, 2, 3, 4, 5, 6].map((lvl) => {
+            const levelNodes = nodes.filter((n) => n.level === lvl);
+            return (
+              <React.Fragment key={lvl}>
+                <div className="flex flex-wrap justify-center gap-4 w-full">
+                  {levelNodes.map((node) => (
+                    <div
+                      key={node.id}
+                      onClick={() => setSelectedNode(node)}
+                      className={`p-3.5 rounded-xl border-2 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer w-full max-w-xl ${
+                        node.isImpacted
+                          ? 'border-red-500 ring-4 ring-red-100'
+                          : 'border-slate-200 hover:border-blue-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-1.5">
+                        <div className="flex items-center gap-2">
+                          {getNodeIcon(node.type)}
+                          {getNodeTypeTag(node.type)}
+                          <span className="text-xs text-slate-400 font-mono">#{node.id}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-500">{node.domainDept}</span>
+                          <Badge
+                            status={node.status === 'CLOSED' || node.status === 'RELEASED' ? 'success' : 'processing'}
+                          />
+                        </div>
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-800 m-0 leading-snug">
+                        {node.name}
+                      </h4>
+                      <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-400 font-mono">
+                        <span className="truncate max-w-[320px]">{node.urn}</span>
+                        {node.extraDetails?.batchNo && (
+                          <span className="text-blue-600 font-semibold">
+                            批次: {node.extraDetails.batchNo}
+                          </span>
+                        )}
+                        {node.extraDetails?.receiptRatio && (
+                          <span className="text-emerald-600 font-bold">
+                            {node.extraDetails.receiptRatio}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <Badge status="success" text="已基线化" />
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-800 m-0">{node.name}</h4>
-                  <p className="text-[11px] font-mono text-slate-400 mt-1 m-0">{node.urn}</p>
+                  ))}
                 </div>
-              ))}
-          </div>
 
-          <div className="w-0.5 h-6 bg-slate-300"></div>
-
-          {/* 层级 2: SysML 构件层 */}
-          <div className="flex justify-center w-full">
-            {nodes
-              .filter((n) => n.level === 2)
-              .map((node) => (
-                <div
-                  key={node.id}
-                  onClick={() => setSelectedNode(node)}
-                  className={`p-4 rounded-xl border-2 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer max-w-md ${
-                    node.isImpacted
-                      ? 'border-red-500 ring-4 ring-red-200 bg-red-50/30'
-                      : 'border-purple-400 hover:border-purple-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3 mb-1">
-                    <div className="flex items-center gap-2">
-                      {getNodeIcon(node.type)}
-                      <Tag color="purple">{getNodeTypeLabel(node.type)}</Tag>
-                      {node.isImpacted && <Tag color="error">变更发起源</Tag>}
-                    </div>
-                    <Badge status="processing" text="已发布" />
+                {lvl < 6 && (
+                  <div className="flex items-center justify-center my-0.5 text-slate-300">
+                    <ArrowDown className="w-4 h-4" />
                   </div>
-                  <h4 className="text-sm font-bold text-slate-800 m-0">{node.name}</h4>
-                  <p className="text-[11px] font-mono text-slate-400 mt-1 m-0">{node.urn}</p>
-                </div>
-              ))}
-          </div>
-
-          <div className="w-0.5 h-6 bg-slate-300"></div>
-
-          {/* 层级 3: CAD 与 仿真联合验证层 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl w-full">
-            {nodes
-              .filter((n) => n.level === 3)
-              .map((node) => (
-                <div
-                  key={node.id}
-                  onClick={() => setSelectedNode(node)}
-                  className={`p-4 rounded-xl border-2 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer ${
-                    node.isImpacted
-                      ? 'border-red-400 ring-2 ring-red-200 bg-red-50/20'
-                      : node.type === 'CAD_MODEL'
-                      ? 'border-amber-400 hover:border-amber-600'
-                      : 'border-emerald-400 hover:border-emerald-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2">
-                      {getNodeIcon(node.type)}
-                      <Tag color={node.type === 'CAD_MODEL' ? 'gold' : 'green'}>
-                        {getNodeTypeLabel(node.type)}
-                      </Tag>
-                    </div>
-                    {node.isImpacted ? (
-                      <span className="text-xs font-bold text-red-600">波及风险 78分</span>
-                    ) : (
-                      <Badge status="default" text="就绪" />
-                    )}
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-800 m-0">{node.name}</h4>
-                  <p className="text-[11px] font-mono text-slate-400 mt-1 m-0">{node.urn}</p>
-                </div>
-              ))}
-          </div>
-
-          <div className="w-0.5 h-6 bg-slate-300"></div>
-
-          {/* 层级 4: 制造工位层 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl w-full">
-            {nodes
-              .filter((n) => n.level === 4)
-              .map((node) => (
-                <div
-                  key={node.id}
-                  onClick={() => setSelectedNode(node)}
-                  className={`p-4 rounded-xl border-2 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer ${
-                    node.isImpacted
-                      ? 'border-red-400 ring-2 ring-red-200 bg-red-50/20'
-                      : 'border-cyan-400 hover:border-cyan-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2">
-                      {getNodeIcon(node.type)}
-                      <Tag color="cyan">{getNodeTypeLabel(node.type)}</Tag>
-                    </div>
-                    {node.isImpacted ? (
-                      <span className="text-xs font-bold text-red-600">待工艺变更评审</span>
-                    ) : (
-                      <Badge status="warning" text="编制中" />
-                    )}
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-800 m-0">{node.name}</h4>
-                  <p className="text-[11px] font-mono text-slate-400 mt-1 m-0">{node.urn}</p>
-                </div>
-              ))}
-          </div>
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
-
-        {/* 选中节点因果元数据快速查看栏 */}
-        {selectedNode && (
-          <div className="mt-4 p-4 bg-white rounded-lg border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-500 uppercase">当前选中节点:</span>
-                <Tag color="blue">{getNodeTypeLabel(selectedNode.type)}</Tag>
-                <span className="font-bold text-slate-800 text-sm">{selectedNode.name}</span>
-              </div>
-              <p className="font-mono text-xs text-slate-400 mt-1 m-0">URN: {selectedNode.urn}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="small"
-                type="primary"
-                className="bg-blue-600"
-                onClick={() => triggerImpactAnalysis(selectedNode.id)}
-              >
-                以此节点为根推演波及
-              </Button>
-              <Button size="small" onClick={() => setSelectedNode(null)}>
-                取消选择
-              </Button>
-            </div>
-          </div>
-        )}
       </Card>
 
-      {/* 变更波及影响度推演抽屉 */}
+      {/* 节点详细因果属性抽屉 */}
       <Drawer
         title={
-          <div className="flex items-center gap-2 text-red-600 font-bold">
-            <AlertTriangle className="w-5 h-5" />
-            <span>变更波及影响推演报告 (Impact Analysis Report)</span>
+          <div className="flex items-center gap-2">
+            {selectedNode && getNodeIcon(selectedNode.type)}
+            <span className="font-bold text-sm">数字主线节点资产因果属性与元数据</span>
           </div>
         }
         placement="right"
         width={480}
-        open={impactDrawerVisible}
-        onClose={() => setImpactDrawerVisible(false)}
+        onClose={() => setSelectedNode(null)}
+        open={!!selectedNode}
       >
-        <div className="space-y-4">
-          <div className="p-4 bg-red-50 rounded-xl border border-red-200">
-            <div className="text-xs font-bold text-red-700 uppercase">变更发起源 (Root Cause)</div>
-            <div className="font-bold text-slate-900 mt-1">SysML v2 直联主轴核心功能块</div>
-            <div className="text-xs text-slate-600 mt-1">
-              拟变更参数：额定扭矩由 105Nm 上调至 135Nm，最高转速保持 12000 RPM
+        {selectedNode && (
+          <div className="space-y-4 text-xs">
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label="节点全局 URN">
+                <span className="font-mono text-blue-700 select-all">{selectedNode.urn}</span>
+              </Descriptions.Item>
+              <Descriptions.Item label="节点类型">
+                {getNodeTypeTag(selectedNode.type)}
+              </Descriptions.Item>
+              <Descriptions.Item label="权威管辖部门">
+                <span className="font-semibold text-slate-800">{selectedNode.domainDept}</span>
+              </Descriptions.Item>
+              <Descriptions.Item label="生命周期状态">
+                <Tag color={selectedNode.status === 'CLOSED' ? 'green' : 'blue'}>
+                  {selectedNode.status}
+                </Tag>
+              </Descriptions.Item>
+              {selectedNode.extraDetails?.digestSha256 && (
+                <Descriptions.Item label="SHA-256 全包数字签名">
+                  <span className="font-mono text-[10px] break-all text-slate-600">
+                    {selectedNode.extraDetails.digestSha256}
+                  </span>
+                </Descriptions.Item>
+              )}
+              {selectedNode.extraDetails?.balanceVerified && (
+                <Descriptions.Item label="消耗平衡验证">
+                  <Tag color="success">100% 消耗守恒通过 (残差为 0)</Tag>
+                </Descriptions.Item>
+              )}
+              {selectedNode.extraDetails?.receiptRatio && (
+                <Descriptions.Item label="MES 逐项异步对账状态">
+                  <Tag color="success">{selectedNode.extraDetails.receiptRatio} (全收讫闭环)</Tag>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-2">
+              <h5 className="font-bold text-slate-800 m-0">数字主线上下游拓扑关系</h5>
+              <p className="text-slate-600 m-0">
+                本节点已通过 PostgreSQL CTE 递归建立全局权威因果关系网，任何上游变更（如 SysML 架构调整）将沿主线自动标注波及风险。
+              </p>
             </div>
           </div>
+        )}
+      </Drawer>
 
-          <div className="border-t border-slate-200 pt-3">
-            <h4 className="font-bold text-slate-800 text-sm mb-2">受波及构件量化清单 (4 项)</h4>
-            <div className="space-y-3">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <div className="flex justify-between items-center">
-                  <Tag color="gold">CAD 模型</Tag>
-                  <span className="text-xs font-bold text-red-600">高风险 (85分)</span>
-                </div>
-                <div className="font-semibold text-xs text-slate-800 mt-1">主轴箱体结构三维轻量化模型</div>
-                <div className="text-[11px] text-slate-500 mt-1">
-                  影响原因：电机法兰接口与安装螺栓预紧力需重新校核
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <div className="flex justify-between items-center">
-                  <Tag color="green">仿真工况</Tag>
-                  <span className="text-xs font-bold text-red-600">必须重新仿真 (90分)</span>
-                </div>
-                <div className="font-semibold text-xs text-slate-800 mt-1">主轴瞬态热力学有限元热变形仿真</div>
-                <div className="text-[11px] text-slate-500 mt-1">
-                  影响原因：电机发热功率从 1.2kW 上升至 1.6kW，热位移需重新验证
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <div className="flex justify-between items-center">
-                  <Tag color="cyan">制造工艺</Tag>
-                  <span className="text-xs font-bold text-amber-600">中风险 (65分)</span>
-                </div>
-                <div className="font-semibold text-xs text-slate-800 mt-1">车间装配 OP10/OP30 工艺规程</div>
-                <div className="text-[11px] text-slate-500 mt-1">
-                  影响原因：装配扭矩要求变动，需修订 BOP 工艺卡片
-                </div>
-              </div>
-            </div>
+      {/* 变更波及推演评估抽屉 */}
+      <Drawer
+        title={
+          <div className="flex items-center gap-2 text-red-600 font-bold">
+            <Sparkles className="w-4 h-4" />
+            <span>SysML架构变更 ➔ 制造车间波及推演评估报告 (D07)</span>
           </div>
-
-          <div className="pt-4 border-t border-slate-200">
-            <Button
-              type="primary"
-              danger
-              block
-              size="large"
-              className="font-medium"
-              onClick={() => {
-                setImpactDrawerVisible(false);
-              }}
-            >
-              发起工程变更通知单 (ECN-2026-0902)
-            </Button>
+        }
+        placement="bottom"
+        height={320}
+        onClose={() => setImpactDrawerVisible(false)}
+        open={impactDrawerVisible}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+          <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+            <span className="text-slate-500">变更波及风险等级</span>
+            <div className="text-xl font-bold text-red-700 mt-1">CRITICAL (极高风险)</div>
+            <p className="text-[11px] text-red-600 mt-1 m-0">
+              波及范围横跨设计 EBOM、工艺 MBOM 及已发布的 MES 制造下发批次单。
+            </p>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <span className="text-slate-500">受波及下游制品总数</span>
+            <div className="text-xl font-bold text-slate-800 mt-1">5 项下游制品</div>
+            <p className="text-[11px] text-slate-500 mt-1 m-0">涵盖 BOP 4 工序编排及 MES 4 项领料回执</p>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 col-span-2">
+            <span className="text-slate-500">工程变更处理建议 (ECO Guidance)</span>
+            <p className="text-slate-700 mt-1 m-0 leading-relaxed">
+              检测到下游下发批次 <strong className="font-mono text-blue-600">DISPATCH-20260916-VMC850-01</strong> 已在车间执行对账。若变更 SysML 架构，必须发起工业工程变更单 (ECN)，通过双阶段确认对车间工单实施锁定并召回再平衡。
+            </p>
           </div>
         </div>
       </Drawer>
