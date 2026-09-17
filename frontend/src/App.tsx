@@ -14,6 +14,7 @@ import { UserManagementPage } from './pages/UserManagementPage';
 import { MailboxPage } from './pages/MailboxPage';
 import { WorkflowCenterPage } from './pages/WorkflowCenterPage';
 import { GenericModulePage } from './pages/GenericModulePage';
+import { MbseWorkspacePage } from './pages/MbseWorkspacePage';
 import { LoginPage } from './pages/LoginPage';
 import { useAuthStore } from './stores/useAuthStore';
 
@@ -55,15 +56,7 @@ export const App: React.FC = () => {
       case 'process-mgmt':
         return <WorkflowCenterPage onNavigate={(tab) => setActiveTab(tab)} />;
       case 'system-design':
-        return (
-          <GenericModulePage
-            moduleKey="system-design"
-            moduleName="系统设计"
-            category="系统架构室"
-            description="基于 SysML v2 规范进行机床整机需求分解、多体动力学逻辑架构及软硬件接口设计。"
-            onNavigate={setActiveTab}
-          />
-        );
+        return <MbseWorkspacePage />;
       case 'product-platform':
         return (
           <GenericModulePage
