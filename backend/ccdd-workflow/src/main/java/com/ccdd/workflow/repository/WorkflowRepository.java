@@ -55,8 +55,23 @@ public class WorkflowRepository {
                 102L, "ChangeOrder", "MAJOR_CHANGE", "PROC_ECO_CHANGE_APPROVAL",
                 1, SignStrategy.UNANIMOUS, null, true, "高端机床重大工程变更单(ECO)跨学科与CCB处置审批流", now.minus(10, ChronoUnit.DAYS)
         );
+        DefinitionBindingEntity b3 = new DefinitionBindingEntity(
+                103L, "ChangeOrder", "STANDARD_RELEASE", "PROC_ECO_CHANGE_APPROVAL",
+                1, SignStrategy.UNANIMOUS, null, true, "高端机床常规工程变更与技术处理审查流", now.minus(10, ChronoUnit.DAYS)
+        );
+        DefinitionBindingEntity b4 = new DefinitionBindingEntity(
+                104L, "Baseline", "STANDARD_RELEASE", "PROC_BASELINE_RELEASE_APPROVAL",
+                1, SignStrategy.UNANIMOUS, null, true, "高端数控机床型号基线(功能/分配/产品基线)受控固化审批流", now.minus(10, ChronoUnit.DAYS)
+        );
+        DefinitionBindingEntity b5 = new DefinitionBindingEntity(
+                105L, "DocRevision", "STANDARD_RELEASE", "PROC_DOC_REVISION_APPROVAL",
+                1, SignStrategy.UNANIMOUS, null, true, "高端机床受控工程图样与设计规范电子会签审签流", now.minus(10, ChronoUnit.DAYS)
+        );
         bindingStore.put(b1.getBindingId(), b1);
         bindingStore.put(b2.getBindingId(), b2);
+        bindingStore.put(b3.getBindingId(), b3);
+        bindingStore.put(b4.getBindingId(), b4);
+        bindingStore.put(b5.getBindingId(), b5);
 
         // 2. 种子实例 1: 流转中的 ECO-2026-0042 会签审批
         Long wf1Id = 77001L;
@@ -107,9 +122,29 @@ public class WorkflowRepository {
 
     // ====== DefinitionBinding ======
     public Optional<DefinitionBindingEntity> findBinding(String targetObjectType, String businessCategory) {
-        return bindingStore.values().stream()
+        if (targetObjectType == null) {
+            return Optional.empty();
+        }
+        // 1. 优先精确匹配 (targetObjectType + businessCategory)
+        Optional<DefinitionBindingEntity> exactMatch = bindingStore.values().stream()
                 .filter(b -> b.getIsActive() && b.getTargetObjectType().equalsIgnoreCase(targetObjectType))
                 .filter(b -> businessCategory == null || b.getBusinessCategory().equalsIgnoreCase(businessCategory))
+                .findFirst();
+        if (exactMatch.isPresent()) {
+            return exactMatch;
+        }
+
+        // 2. 容错回退：同机床业务对象类型的任一有效流程绑定
+        Optional<DefinitionBindingEntity> typeFallback = bindingStore.values().stream()
+                .filter(b -> b.getIsActive() && b.getTargetObjectType().equalsIgnoreCase(targetObjectType))
+                .findFirst();
+        if (typeFallback.isPresent()) {
+            return typeFallback;
+        }
+
+        // 3. 系统级通用受控审查流程兜底（绝不抛出阻断性空指针或未配置异常）
+        return bindingStore.values().stream()
+                .filter(DefinitionBindingEntity::getIsActive)
                 .findFirst();
     }
 

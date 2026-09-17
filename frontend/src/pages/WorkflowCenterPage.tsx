@@ -38,137 +38,36 @@ import {
   Lock,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
+import {
+  useWorkflowStore,
+  WorkflowTaskItem,
+  WorkflowInstanceItem,
+  ApprovalDecisionItem,
+} from '@/stores/useWorkflowStore';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
 
-// ==================== 数据契约接口 ====================
-
-export interface WorkflowTaskItem {
-  taskId: string;
-  taskName: string;
-  workflowInstId: number;
-  flowableProcInstId: string;
-  targetObjectType: string;
-  targetObjectId: number;
-  targetBusinessCode: string;
-  projectId?: string;
-  initiatorId: string;
-  assignee?: string;
-  isSelfApprovalRestricted: boolean;
-  createdAt: string;
-}
-
-export interface WorkflowInstanceItem {
-  workflowInstId: number;
-  flowableProcInstId: string;
-  bindingId: number;
-  targetObjectType: string;
-  targetObjectId: number;
-  targetBusinessCode: string;
-  targetContentHash: string;
-  projectId?: string;
-  initiatorId: string;
-  status: 'RUNNING' | 'COMPLETED' | 'TERMINATED' | 'SUSPENDED';
-  conclusion?: 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
-  terminationReason?: string;
-  startedAt: string;
-  completedAt?: string;
-}
-
-export interface ApprovalDecisionItem {
-  decisionTicketId: number;
-  workflowInstId: number;
-  targetObjectType: string;
-  targetObjectId: number;
-  targetContentHash: string;
-  finalConclusion: 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
-  isConsumed: boolean;
-  consumedAt?: string;
-  consumedByAction?: string;
-  cryptoSignatureStamp: string;
-  signedPayloadDigest: string;
-  decidedAt: string;
-}
+export type { WorkflowTaskItem, WorkflowInstanceItem, ApprovalDecisionItem };
 
 interface WorkflowCenterPageProps {
   onNavigate?: (tab: string) => void;
 }
 
-// 模拟初始种子数据
-const INITIAL_TASKS_SEED: WorkflowTaskItem[] = [
-  {
-    taskId: 'task_eco_ccb_02',
-    taskName: 'CCB变更控制委员会决策签发',
-    workflowInstId: 77001,
-    flowableProcInstId: 'prc_inst_eco_0042',
-    targetObjectType: 'ChangeOrder',
-    targetObjectId: 8001,
-    targetBusinessCode: 'ECO-2026-0042',
-    projectId: 'VMC_ENTERPRISE',
-    initiatorId: 'chief_designer',
-    assignee: 'admin',
-    isSelfApprovalRestricted: false,
-    createdAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-  },
-];
-
-const INITIAL_INSTANCES_SEED: WorkflowInstanceItem[] = [
-  {
-    workflowInstId: 77001,
-    flowableProcInstId: 'prc_inst_eco_0042',
-    bindingId: 102,
-    targetObjectType: 'ChangeOrder',
-    targetObjectId: 8001,
-    targetBusinessCode: 'ECO-2026-0042',
-    targetContentHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    projectId: 'VMC_ENTERPRISE',
-    initiatorId: 'chief_designer',
-    status: 'RUNNING',
-    startedAt: new Date(Date.now() - 7200 * 1000).toISOString(),
-  },
-  {
-    workflowInstId: 77002,
-    flowableProcInstId: 'prc_inst_rel_0001',
-    bindingId: 101,
-    targetObjectType: 'ModelRelease',
-    targetObjectId: 5001,
-    targetBusinessCode: 'REL-VMC1000-SYS-001',
-    targetContentHash: '8fc3a718d0984a1e948c21a37c02b54901239841892809182390192830192a01',
-    projectId: 'VMC_ENTERPRISE',
-    initiatorId: 'sys_architect',
-    status: 'COMPLETED',
-    conclusion: 'APPROVED',
-    startedAt: new Date(Date.now() - 3 * 86400 * 1000).toISOString(),
-    completedAt: new Date(Date.now() - 2 * 86400 * 1000).toISOString(),
-  },
-];
-
-const INITIAL_DECISIONS_SEED: ApprovalDecisionItem[] = [
-  {
-    decisionTicketId: 88001,
-    workflowInstId: 77002,
-    targetObjectType: 'ModelRelease',
-    targetObjectId: 5001,
-    targetContentHash: '8fc3a718d0984a1e948c21a37c02b54901239841892809182390192830192a01',
-    finalConclusion: 'APPROVED',
-    isConsumed: true,
-    consumedAt: new Date(Date.now() - 2 * 86400 * 1000).toISOString(),
-    consumedByAction: 'CONSUME-ACT-M06-REL-5001',
-    cryptoSignatureStamp: 'SIG_RSA_MC0CFQCZ01...99a01x==',
-    signedPayloadDigest: 'a7c2b3e891238491820391820391820391820391820391820391820391820391',
-    decidedAt: new Date(Date.now() - 2 * 86400 * 1000).toISOString(),
-  },
-];
-
 export const WorkflowCenterPage: React.FC<WorkflowCenterPageProps> = () => {
   const { user } = useAuthStore();
   const currentUserId = user?.username || 'admin';
 
-  // 数据列表状态
-  const [tasks, setTasks] = useState<WorkflowTaskItem[]>(INITIAL_TASKS_SEED);
-  const [instances, setInstances] = useState<WorkflowInstanceItem[]>(INITIAL_INSTANCES_SEED);
-  const [decisions, setDecisions] = useState<ApprovalDecisionItem[]>(INITIAL_DECISIONS_SEED);
+  // 全局工作流数据存储与 Flowable 流程引擎（支持本地离线沙箱与后端协同）
+  const {
+    tasks,
+    instances,
+    decisions,
+    fetchWorkflowData,
+    startWorkflow,
+    completeTask,
+    consumeDecision,
+  } = useWorkflowStore();
 
   // 交互状态
   const [activeTab, setActiveTab] = useState<string>('tasks');
@@ -189,28 +88,41 @@ export const WorkflowCenterPage: React.FC<WorkflowCenterPageProps> = () => {
   const [approveForm] = Form.useForm();
   const [startForm] = Form.useForm();
 
-  // 尝试拉取后端真实数据
+  // 尝试拉取最新工作流数据
   useEffect(() => {
-    fetchWorkflowData();
+    fetchWorkflowData(currentUserId);
   }, [currentUserId]);
 
-  const fetchWorkflowData = async () => {
-    try {
-      const [tRes, iRes] = await Promise.all([
-        fetch('/api/v1/workflow-tasks/pending', { headers: { 'X-Current-User-Id': currentUserId } }),
-        fetch('/api/v1/workflow-instances'),
-      ]);
-
-      if (tRes.ok) {
-        const tJson = await tRes.json();
-        if (tJson?.data) setTasks(tJson.data);
-      }
-      if (iRes.ok) {
-        const iJson = await iRes.json();
-        if (iJson?.data) setInstances(iJson.data);
-      }
-    } catch {
-      // 离线降级使用种子数据
+  // 联动表单字段：当切换被审实体类型时，自动推荐匹配的审批分类与编号样例
+  const handleObjectTypeChange = (val: string) => {
+    if (val === 'ChangeOrder') {
+      startForm.setFieldsValue({
+        targetObjectId: 8002,
+        targetBusinessCode: 'ECO-2026-0043',
+        businessCategory: 'MAJOR_CHANGE',
+        targetContentHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      });
+    } else if (val === 'Baseline') {
+      startForm.setFieldsValue({
+        targetObjectId: 6001,
+        targetBusinessCode: 'BL-VMC1000-PROD-01',
+        businessCategory: 'STANDARD_RELEASE',
+        targetContentHash: '9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b',
+      });
+    } else if (val === 'DocRevision') {
+      startForm.setFieldsValue({
+        targetObjectId: 7001,
+        targetBusinessCode: 'DOC-VMC1000-MECH-01',
+        businessCategory: 'STANDARD_RELEASE',
+        targetContentHash: '3f2b1a0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a',
+      });
+    } else {
+      startForm.setFieldsValue({
+        targetObjectId: 5003,
+        targetBusinessCode: 'REL-VMC1000-NEW-01',
+        businessCategory: 'STANDARD_RELEASE',
+        targetContentHash: '7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069',
+      });
     }
   };
 
@@ -250,58 +162,18 @@ export const WorkflowCenterPage: React.FC<WorkflowCenterPageProps> = () => {
     setApproveModalVisible(true);
   };
 
-  // 执行审批
+  // 执行审批节点办理（生成国密数字签名凭据）
   const handleCompleteTask = async (values: any) => {
     if (!currentTask) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/v1/workflow-tasks/${currentTask.taskId}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Current-User-Id': currentUserId,
-        },
-        body: JSON.stringify({
-          action: values.action,
-          comment: values.comment,
-        }),
-      });
-
-      let resData;
-      if (res.ok) {
-        resData = (await res.json())?.data;
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || '后端审批流转异常');
-      }
-
-      // 本地状态更新
-      setTasks((prev) => prev.filter((t) => t.taskId !== currentTask.taskId));
-
-      const newDecision: ApprovalDecisionItem = {
-        decisionTicketId: resData?.decisionTicketId || Date.now(),
-        workflowInstId: currentTask.workflowInstId,
-        targetObjectType: currentTask.targetObjectType,
-        targetObjectId: currentTask.targetObjectId,
-        targetContentHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        finalConclusion: resData?.finalConclusion || values.action === 'REJECT' ? 'REJECTED' : 'APPROVED',
-        isConsumed: false,
-        cryptoSignatureStamp: 'SIG_RSA_PLATFORM_KEY_' + Math.random().toString(36).substring(2, 12).toUpperCase(),
-        signedPayloadDigest: 'digest_' + Math.random().toString(36).substring(2, 12),
-        decidedAt: new Date().toISOString(),
-      };
-
-      setDecisions((prev) => [newDecision, ...prev]);
-      setLatestDecision(newDecision);
-
-      setInstances((prev) =>
-        prev.map((inst) =>
-          inst.workflowInstId === currentTask.workflowInstId
-            ? { ...inst, status: 'COMPLETED', conclusion: newDecision.finalConclusion }
-            : inst
-        )
+      const decision = await completeTask(
+        currentTask.taskId,
+        values.action,
+        values.comment,
+        currentUserId
       );
-
+      setLatestDecision(decision);
       message.success('节点审批完成！已生成不可篡改数字签名凭据');
       setApproveModalVisible(false);
       setStampModalVisible(true);
@@ -312,31 +184,11 @@ export const WorkflowCenterPage: React.FC<WorkflowCenterPageProps> = () => {
     }
   };
 
-  // 模拟业务系统核销凭据
+  // 模拟业务系统核销凭据（AT-16 防篡改校验）
   const handleConsumeDecision = async (ticket: ApprovalDecisionItem, tamperHash = false) => {
     try {
       const expectedHash = tamperHash ? 'tampered_hash_error' : ticket.targetContentHash;
-      const res = await fetch(`/api/v1/workflow-decisions/${ticket.decisionTicketId}/consume`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actionId: 'ACTION-CONSUME-TEST-' + Date.now(),
-          expectedContentHash: expectedHash,
-        }),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || '凭证核销失败');
-      }
-
-      setDecisions((prev) =>
-        prev.map((d) =>
-          d.decisionTicketId === ticket.decisionTicketId
-            ? { ...d, isConsumed: true, consumedAt: new Date().toISOString() }
-            : d
-        )
-      );
+      await consumeDecision(ticket.decisionTicketId, expectedHash);
       message.success('凭证核销成功！业务状态机已推进至 RELEASED');
     } catch (err: any) {
       Modal.error({
@@ -346,62 +198,19 @@ export const WorkflowCenterPage: React.FC<WorkflowCenterPageProps> = () => {
     }
   };
 
-  // 发起新审批
+  // 发起新审批流程（深度支持 Flowable 引擎启动与沙箱自动降级）
   const handleStartWorkflow = async (values: any) => {
+    setSubmitting(true);
     try {
-      const res = await fetch('/api/v1/workflow-instances', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Current-User-Id': currentUserId,
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || '启动流程失败');
-      }
-
-      const resData = (await res.json())?.data;
-      const newInst: WorkflowInstanceItem = {
-        workflowInstId: resData?.workflowInstId || Date.now(),
-        flowableProcInstId: resData?.flowableProcInstId || 'prc_' + Date.now(),
-        bindingId: 101,
-        targetObjectType: values.targetObjectType,
-        targetObjectId: values.targetObjectId,
-        targetBusinessCode: values.targetBusinessCode,
-        targetContentHash: values.targetContentHash,
-        projectId: values.projectId || 'VMC_ENTERPRISE',
-        initiatorId: currentUserId,
-        status: 'RUNNING',
-        startedAt: new Date().toISOString(),
-      };
-
-      setInstances((prev) => [newInst, ...prev]);
-
-      // 生成一条待办
-      const newTask: WorkflowTaskItem = {
-        taskId: 'task_' + Date.now(),
-        taskName: '专业技术联合审查',
-        workflowInstId: newInst.workflowInstId,
-        flowableProcInstId: newInst.flowableProcInstId,
-        targetObjectType: values.targetObjectType,
-        targetObjectId: values.targetObjectId,
-        targetBusinessCode: values.targetBusinessCode,
-        projectId: newInst.projectId,
-        initiatorId: currentUserId,
-        assignee: 'lead_analyst',
-        isSelfApprovalRestricted: false,
-        createdAt: new Date().toISOString(),
-      };
-      setTasks((prev) => [newTask, ...prev]);
-
+      await startWorkflow(values, currentUserId);
       message.success('业务审批流程已成功启动！Flowable 实例已激活');
       setStartModalVisible(false);
       startForm.resetFields();
+      setActiveTab('tasks');
     } catch (err: any) {
       message.error(err.message || '启动流程异常');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -432,7 +241,7 @@ export const WorkflowCenterPage: React.FC<WorkflowCenterPageProps> = () => {
               >
                 发起业务审批流
               </Button>
-              <Button icon={<RefreshCw className="w-3.5 h-3.5" />} onClick={fetchWorkflowData}>
+              <Button icon={<RefreshCw className="w-3.5 h-3.5" />} onClick={() => fetchWorkflowData(currentUserId)}>
                 刷新
               </Button>
             </Space>
@@ -993,6 +802,7 @@ export const WorkflowCenterPage: React.FC<WorkflowCenterPageProps> = () => {
             rules={[{ required: true }]}
           >
             <Select
+              onChange={handleObjectTypeChange}
               options={[
                 { label: '系统模型发布 (ModelRelease)', value: 'ModelRelease' },
                 { label: '工程变更单 (ChangeOrder / ECO)', value: 'ChangeOrder' },
@@ -1050,7 +860,7 @@ export const WorkflowCenterPage: React.FC<WorkflowCenterPageProps> = () => {
           <Row justify="end">
             <Space>
               <Button onClick={() => setStartModalVisible(false)}>取消</Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" loading={submitting}>
                 立即启动 Flowable 审批流
               </Button>
             </Space>
