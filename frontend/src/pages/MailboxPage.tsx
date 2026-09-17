@@ -99,6 +99,95 @@ interface MailboxPageProps {
   onNavigate?: (tab: string) => void;
 }
 
+// ==================== 已创建系统用户选项定义 ====================
+export interface SystemUserOption {
+  userId: string;
+  deptId?: number;
+  deptName?: string;
+  username: string;
+  realName: string;
+  email: string;
+  mobile?: string;
+  status?: string;
+  roleNames?: string[];
+}
+
+// 统一对齐平台已创建代表性工程研制系统用户 (8大核心用户)
+export const DEFAULT_SYSTEM_USERS: SystemUserOption[] = [
+  {
+    userId: 'ENG-ADMIN-001',
+    deptId: 100,
+    deptName: '企业信息技术部 (IT & 运维)',
+    username: 'admin',
+    realName: '系统管理员 (IT)',
+    email: 'admin@ccddesigner.com',
+    roleNames: ['系统管理员'],
+  },
+  {
+    userId: 'ENG-2048',
+    deptId: 200,
+    deptName: '高端机床机械结构总体室',
+    username: 'zhang_jg',
+    realName: '张建国 (机械总工)',
+    email: 'zhang_jg@ccddesigner.com',
+    roleNames: ['机械工程师', '机械总工'],
+  },
+  {
+    userId: 'ENG-3001',
+    deptId: 400,
+    deptName: '数控系统与伺服控制研发室',
+    username: 'li_sys',
+    realName: '李明 (系统架构师)',
+    email: 'li_ming@ccddesigner.com',
+    roleNames: ['系统工程师与总体架构师'],
+  },
+  {
+    userId: 'ENG-4002',
+    deptId: 500,
+    deptName: '数字化工程仿真与多体动力学室',
+    username: 'wang_sim',
+    realName: '王强 (仿真工程师)',
+    email: 'wang_qiang@ccddesigner.com',
+    roleNames: ['仿真工程师'],
+  },
+  {
+    userId: 'ENG-5003',
+    deptId: 800,
+    deptName: '整机质量检验与适航认证部',
+    username: 'zhao_qual',
+    realName: '赵晓华 (专职审查员)',
+    email: 'zhao_xh@ccddesigner.com',
+    roleNames: ['质量与服务工程师', '专职审查员'],
+  },
+  {
+    userId: 'ENG-6004',
+    deptId: 700,
+    deptName: '制造工艺与工装工程部',
+    username: 'sun_proc',
+    realName: '孙工 (工艺主管)',
+    email: 'sun_proc@ccddesigner.com',
+    roleNames: ['工艺工程师'],
+  },
+  {
+    userId: 'ENG-7005',
+    deptId: 700,
+    deptName: '制造工艺与工装工程部',
+    username: 'qian_field',
+    realName: '钱师傅 (车间装配工)',
+    email: 'qian_field@ccddesigner.com',
+    roleNames: ['车间装配工'],
+  },
+  {
+    userId: 'ENG-EXT-01',
+    deptId: 200,
+    deptName: '高端机床机械结构总体室',
+    username: 'ext_supplier',
+    realName: '德国主轴外协专家',
+    email: 'spindle_ext@supplier.de',
+    roleNames: ['外协专家'],
+  },
+];
+
 // 模拟高端机床研发体系初始种子邮件数据（与数据库 V1.9.0 完全对齐）
 const INITIAL_MAIL_SEED: MailItem[] = [
   {
@@ -237,10 +326,32 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
   const [securityBlockModalVisible, setSecurityBlockModalVisible] = useState<boolean>(false);
   const [securityBlockReason, setSecurityBlockReason] = useState<string>('');
 
+  // 已创建系统用户列表（用于内部邮件收件人精准指派）
+  const [systemUsers, setSystemUsers] = useState<SystemUserOption[]>(DEFAULT_SYSTEM_USERS);
+
   // 模拟当前用户的授权身份（用于展示 PBAC 跨域越权阻断测试）
   const [simulatedUserRole, setSimulatedUserRole] = useState<'AUTHORIZED' | 'UNAUTHORIZED'>('AUTHORIZED');
 
   const [composeForm] = Form.useForm();
+
+  // 获取平台已创建的真实系统用户
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/v1/users');
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.data && Array.isArray(json.data) && json.data.length > 0) {
+          setSystemUsers(json.data);
+        }
+      }
+    } catch {
+      // 离线沙箱保持种子用户
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   // 尝试从真实 API 加载，网络异常自动保留内存 Seed 数据
   useEffect(() => {
@@ -483,6 +594,21 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
     setComposeLoading(true);
     try {
       const newId = Date.now();
+      const currentSenderName = user?.realName || '机床研发工程师';
+      const currentSenderId = user?.userId || currentUserId;
+
+      // 从已经创建的系统用户中精确匹配收件人
+      const resolvedRecipients = (values.recipients || []).map((identifier: string) => {
+        const found = systemUsers.find(
+          (u) => u.username === identifier || u.userId === identifier || u.email === identifier
+        );
+        return {
+          userId: found?.userId || identifier,
+          userName: found ? `${found.realName} (${found.username})` : identifier,
+          recipientType: 'TO' as const,
+        };
+      });
+
       const newMail: MailItem = {
         messageId: newId,
         userBoxId: newId + 1,
@@ -490,8 +616,8 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
         systemType: 'TECHNICAL',
         subject: values.subject,
         content: `<p>${values.content.replace(/\n/g, '<br/>')}</p>`,
-        senderUserId: currentUserId,
-        senderUserName: '总设计师',
+        senderUserId: currentSenderId,
+        senderUserName: currentSenderName,
         priority: values.priority || 'NORMAL',
         relatedProjectId: values.relatedProjectId || 'VMC_ENTERPRISE',
         relatedObjType: values.relatedObjType,
@@ -503,11 +629,7 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
         boxType: 'OUTBOX',
         hasAttachment: false,
         createdAt: new Date().toISOString(),
-        recipients: (values.recipients || []).map((uid: string) => ({
-          userId: uid,
-          userName: uid === 'chief_designer' ? '总设计师' : uid === 'lead_analyst' ? '仿真组长' : '工艺主管',
-          recipientType: 'TO',
-        })),
+        recipients: resolvedRecipients,
       };
 
       // 尝试推送到后端
@@ -515,8 +637,8 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Current-User-Id': currentUserId,
-          'X-Current-User-Name': '总设计师',
+          'X-Current-User-Id': currentSenderId,
+          'X-Current-User-Name': encodeURIComponent(currentSenderName),
         },
         body: JSON.stringify({
           subject: values.subject,
@@ -526,16 +648,12 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
           relatedObjType: values.relatedObjType,
           relatedObjId: values.relatedObjId,
           targetActionUrl: values.targetActionUrl,
-          recipients: (values.recipients || []).map((uid: string) => ({
-            userId: uid,
-            userName: uid,
-            recipientType: 'TO',
-          })),
+          recipients: resolvedRecipients,
         }),
       }).catch(() => null);
 
       setMails((prev) => [newMail, ...prev]);
-      message.success('邮件发送成功！已写入发件箱并完成多播投递');
+      message.success('邮件发送成功！已写入发件箱并完成向选定系统用户的投递');
       setIsComposeVisible(false);
       composeForm.resetFields();
     } finally {
@@ -607,7 +725,10 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
             size="large"
             icon={<PlusCircle className="w-4 h-4" />}
             style={{ width: '100%', marginBottom: 16, fontWeight: 600, borderRadius: 6 }}
-            onClick={() => setIsComposeVisible(true)}
+            onClick={() => {
+              fetchUsers();
+              setIsComposeVisible(true);
+            }}
           >
             写研制邮件
           </Button>
@@ -1171,19 +1292,41 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
             <Col span={16}>
               <Form.Item
                 name="recipients"
-                label="收件人"
-                rules={[{ required: true, message: '请选择至少一位收件人' }]}
+                label={
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-semibold text-slate-800">收件人 (已创建的系统用户)</span>
+                    <span className="text-xs text-slate-400 font-normal">
+                      共 {systemUsers.length} 位已注册用户
+                    </span>
+                  </div>
+                }
+                rules={[{ required: true, message: '请选择至少一位已创建的系统用户作为收件人' }]}
               >
                 <Select
                   mode="multiple"
-                  placeholder="选择系统研制人员"
-                  options={[
-                    { label: '总设计师 (chief_designer)', value: 'chief_designer' },
-                    { label: '仿真分析组长 (lead_analyst)', value: 'lead_analyst' },
-                    { label: '工艺主管工程师 (process_engineer)', value: 'process_engineer' },
-                    { label: '项目经理 (project_manager)', value: 'project_manager' },
-                    { label: '系统管理员 (admin)', value: 'admin' },
-                  ]}
+                  showSearch
+                  placeholder="从系统已创建用户中选择收件人 (支持按姓名、工号、账号、部门搜索)"
+                  optionFilterProp="filterText"
+                  options={systemUsers.map((u) => ({
+                    value: u.username,
+                    label: (
+                      <div className="flex items-center justify-between py-0.5">
+                        <Space size={6}>
+                          <span className="font-semibold text-slate-800">{u.realName}</span>
+                          <span className="text-xs text-slate-400 font-mono">(@{u.username})</span>
+                          {u.deptName && (
+                            <Tag color="blue" className="text-[10px] m-0">
+                              {u.deptName}
+                            </Tag>
+                          )}
+                        </Space>
+                        <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+                          {u.email}
+                        </span>
+                      </div>
+                    ),
+                    filterText: `${u.realName} ${u.username} ${u.userId} ${u.deptName || ''} ${u.email || ''}`,
+                  }))}
                 />
               </Form.Item>
             </Col>
