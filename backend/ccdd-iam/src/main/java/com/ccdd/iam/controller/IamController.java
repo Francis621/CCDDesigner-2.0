@@ -2,8 +2,11 @@ package com.ccdd.iam.controller;
 
 import com.ccdd.common.api.Result;
 import com.ccdd.iam.dto.AssignProjectMemberRequest;
+import com.ccdd.iam.dto.ChangePasswordRequest;
 import com.ccdd.iam.dto.CreateUserRequest;
 import com.ccdd.iam.dto.DepartmentDto;
+import com.ccdd.iam.dto.LoginRequest;
+import com.ccdd.iam.dto.LoginResponse;
 import com.ccdd.iam.dto.RegisterQualificationRequest;
 import com.ccdd.iam.dto.RevokeMembershipResponse;
 import com.ccdd.iam.dto.UpdateUserStatusRequest;
@@ -126,5 +129,35 @@ public class IamController {
     @GetMapping("/iam/revocations")
     public Result<List<SysSessionRevocationEntity>> getRevocationAudits() {
         return Result.success(iamService.getRevocationAuditList());
+    }
+
+    // ==================== 身份认证与密码管理 ====================
+
+    /**
+     * OpenAPI: 用户账号密码登录认证
+     */
+    @PostMapping("/auth/login")
+    public Result<LoginResponse> login(@RequestBody LoginRequest request) {
+        return Result.success(iamService.login(request));
+    }
+
+    /**
+     * OpenAPI: 用户自主修改登录密码
+     */
+    @PostMapping("/users/{userId}/change-password")
+    public Result<UserDetailDto> changePassword(
+            @PathVariable String userId,
+            @RequestBody ChangePasswordRequest request) {
+        return Result.success(iamService.changePassword(userId, request));
+    }
+
+    /**
+     * 兼容 REST 风格 PUT /users/{userId}/password
+     */
+    @PutMapping("/users/{userId}/password")
+    public Result<UserDetailDto> updatePassword(
+            @PathVariable String userId,
+            @RequestBody ChangePasswordRequest request) {
+        return Result.success(iamService.changePassword(userId, request));
     }
 }

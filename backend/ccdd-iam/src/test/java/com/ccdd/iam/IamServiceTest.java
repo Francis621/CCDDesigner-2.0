@@ -1,8 +1,14 @@
 package com.ccdd.iam;
 
+import com.ccdd.common.api.BusinessException;
+import com.ccdd.common.api.ErrorCode;
 import com.ccdd.iam.aspect.EngineeringSoDGuardAspect;
 import com.ccdd.iam.dto.AssignProjectMemberRequest;
+import com.ccdd.iam.dto.ChangePasswordRequest;
+import com.ccdd.iam.dto.LoginRequest;
+import com.ccdd.iam.dto.LoginResponse;
 import com.ccdd.iam.dto.RevokeMembershipResponse;
+import com.ccdd.iam.dto.UserDetailDto;
 import com.ccdd.iam.entity.ProjectRoleType;
 import com.ccdd.iam.entity.SysProjectMembershipEntity;
 import com.ccdd.iam.exception.AdminSignForbiddenException;
@@ -163,5 +169,83 @@ public class IamServiceTest {
         });
         assertEquals("ERR_PROJECT_MEMBERSHIP_REQUIRED", ex.getErrorCode());
         assertTrue(ex.getMessage().contains("未加入机床研制项目"));
+    }
+
+    /**
+     * TC-IAM-07: 用户账号密码登录鉴权测试
+     * 场景：使用正确密码登录成功获得会话 Token，输入错误密码被拒绝
+     */
+    @Test
+    @DisplayName("TC-IAM-07: [登录鉴权] 账号密码登录与错误拦截测试")
+    void testTcIam07_UserLoginAuthentication() {
+        // 1. 系统管理员 admin 使用预设初始密码成功登录
+        LoginResponse adminResp = iamService.login(new LoginRequest("admin", "admin123"));
+        assertNotNull(adminResp.getToken());
+        assertTrue(adminResp.getToken().startsWith("JWT-CCDD-ENG-ADMIN-001"));
+        assertEquals("admin", adminResp.getUser().getUsername());
+        assertEquals("系统管理员 (IT)", adminResp.getUser().getRealName());
+
+        // 2. 机械总工 zhang_jg 使用通用工程密码 Ccdd@2026! 登录成功
+        LoginResponse zhangResp = iamService.login(new LoginRequest("zhang_jg", "Ccdd@2026!"));
+        assertNotNull(zhangResp.getToken());
+        assertEquals("ENG-2048", zhangResp.getUser().getUserId());
+
+        // 3. 错误密码登录拦截
+        BusinessException ex = assertThrows(BusinessException.class, () -> {
+            iamService.login(new LoginRequest("zhang_jg", "wrong-password-999"));
+        });
+        assertEquals(ErrorCode.UNAUTHORIZED.getCode(), ex.getCode());
+
+        // 4. 不存在的用户名登录拦截
+        BusinessException exNotFound = assertThrows(BusinessException.class, () -> {
+            iamService.login(new LoginRequest("non_existent_user", "Ccdd@2026!"));
+        });
+        assertEquals(ErrorCode.UNAUTHORIZED.getCode(), exNotFound.getCode());
+    }
+
+    /**
+     * TC-IAM-08: 用户自主修改密码与二次登录验证
+     * 场景：机械总工修改密码，旧密码错误被阻断，修改成功后旧密码失效且新密码生效
+     */
+    @Test
+    @DisplayName("TC-IAM-08: [修改密码] 原密码验证、密码变更及凭证更新测试")
+    void testTcIam08_UserChangePassword() {
+        String userId = "ENG-2048";
+
+        // 1. 原密码错误修改被阻断
+        BusinessException exWrongOld = assertThrows(BusinessException.class, () -> {
+            iamService.changePassword(userId, new ChangePasswordRequest("wrong-old-pwd", "NewSecurePassword@2026"));
+        });
+        assertEquals(ErrorCode.BAD_REQUEST.getCode(), exWrongOld.getCode());
+        assertTrue(exWrongOld.getMessage().contains("原密码输入不正确"));
+
+        // 2. 新密码长度不足 6 位被阻断
+        BusinessException exShort = assertThrows(BusinessException.class, () -> {
+            iamService.changePassword(userId, new ChangePasswordRequest("Ccdd@2026!", "123"));
+        });
+        assertEquals(ErrorCode.BAD_REQUEST.getCode(), exShort.getCode());
+        assertTrue(exShort.getMessage().contains("不得低于 6 位"));
+
+        // 3. 新密码与原密码相同被阻断
+        BusinessException exSame = assertThrows(BusinessException.class, () -> {
+            iamService.changePassword(userId, new ChangePasswordRequest("Ccdd@2026!", "Ccdd@2026!"));
+        });
+        assertEquals(ErrorCode.BAD_REQUEST.getCode(), exSame.getCode());
+        assertTrue(exSame.getMessage().contains("不能与原密码相同"));
+
+        // 4. 正确修改密码
+        UserDetailDto updatedUser = iamService.changePassword(userId, new ChangePasswordRequest("Ccdd@2026!", "NewMechanicalChief@888"));
+        assertNotNull(updatedUser);
+        assertEquals("zhang_jg", updatedUser.getUsername());
+
+        // 5. 旧密码不再能够登录
+        assertThrows(BusinessException.class, () -> {
+            iamService.login(new LoginRequest("zhang_jg", "Ccdd@2026!"));
+        });
+
+        // 6. 新密码登录成功
+        LoginResponse newLogin = iamService.login(new LoginRequest("zhang_jg", "NewMechanicalChief@888"));
+        assertNotNull(newLogin.getToken());
+        assertEquals("ENG-2048", newLogin.getUser().getUserId());
     }
 }

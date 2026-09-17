@@ -31,9 +31,11 @@ import {
   UserCheck,
   Lock,
   Workflow,
+  KeyRound,
 } from 'lucide-react';
 import { useAuthStore, SecurityClassification } from '@/stores/useAuthStore';
 import { useProjectStore } from '@/stores/useProjectStore';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 const { Header, Sider, Content } = Layout;
 
@@ -49,9 +51,44 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, setSecurityClearance, switchRole, isAdmin } = useAuthStore();
+  const [changePasswordVisible, setChangePasswordVisible] = useState(false);
+  const { user, setSecurityClearance, switchRole, isAdmin, logout } = useAuthStore();
   const { currentProject } = useProjectStore();
   const isSystemAdmin = isAdmin();
+
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'user-info',
+      disabled: true,
+      label: (
+        <div className="py-1 px-1 text-slate-700">
+          <div className="font-bold text-xs">{user.realName}</div>
+          <div className="text-[10px] text-slate-400 font-mono">账号: {user.username} · {user.department}</div>
+        </div>
+      ),
+    },
+    { type: 'divider' },
+    {
+      key: 'change-password',
+      icon: <KeyRound className="w-4 h-4 text-blue-600" />,
+      label: '修改登录密码',
+    },
+    {
+      key: 'logout',
+      icon: <LogOut className="w-4 h-4 text-red-500" />,
+      danger: true,
+      label: '退出登录 / 切换账号',
+    },
+  ];
+
+  const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'change-password') {
+      setChangePasswordVisible(true);
+    } else if (key === 'logout') {
+      logout();
+      message.success('已安全退出登录，请重新选择账号');
+    }
+  };
 
   const securityMenuItems: MenuProps['items'] = [
     { key: 'PUBLIC', label: '公开 (PUBLIC)' },
@@ -363,18 +400,32 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               </div>
             </Dropdown>
 
-            {/* 用户身份与岗位 */}
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-              <div className="text-right hidden sm:block">
-                <div className="text-xs font-bold text-slate-800">{user.realName}</div>
-                <div className="text-[10px] text-slate-500">{user.role}</div>
+            {/* 用户身份与操作下拉菜单 */}
+            <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }}>
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 cursor-pointer hover:bg-slate-50 py-1 px-2 rounded-lg transition-colors">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                  {user.realName.slice(0, 1)}
+                </div>
+                <div className="text-right hidden sm:block">
+                  <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                    <span>{user.realName}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500">{user.role}</div>
+                </div>
               </div>
-              <Tooltip title="安全登出">
-                <button className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </Tooltip>
-            </div>
+            </Dropdown>
+
+            <Tooltip title="退出登录 / 切换账号">
+              <button
+                onClick={() => {
+                  logout();
+                  message.success('已安全退出登录');
+                }}
+                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors ml-1"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </Tooltip>
           </div>
         </Header>
 
@@ -383,6 +434,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           {children}
         </Content>
       </Layout>
+
+      {/* 修改登录密码弹窗 */}
+      <ChangePasswordModal
+        visible={changePasswordVisible}
+        onClose={() => setChangePasswordVisible(false)}
+      />
     </Layout>
   );
 };

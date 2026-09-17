@@ -14,8 +14,11 @@ import { UserManagementPage } from './pages/UserManagementPage';
 import { MailboxPage } from './pages/MailboxPage';
 import { WorkflowCenterPage } from './pages/WorkflowCenterPage';
 import { GenericModulePage } from './pages/GenericModulePage';
+import { LoginPage } from './pages/LoginPage';
+import { useAuthStore } from './stores/useAuthStore';
 
 export const App: React.FC = () => {
+  const { isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<string>('workbench');
 
   const renderContent = () => {
@@ -136,9 +139,13 @@ export const App: React.FC = () => {
         },
       }}
     >
-      <MainLayout currentTab={activeTab} onTabChange={setActiveTab}>
-        {renderContent()}
-      </MainLayout>
+      {!isAuthenticated ? (
+        <LoginPage />
+      ) : (
+        <MainLayout currentTab={activeTab} onTabChange={setActiveTab}>
+          {renderContent()}
+        </MainLayout>
+      )}
     </ConfigProvider>
   );
 };
