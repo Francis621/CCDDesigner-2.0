@@ -179,19 +179,52 @@ public class MessageRepository {
         return entity;
     }
 
+    private static final Map<String, String> USER_ALIAS_MAP = new ConcurrentHashMap<>();
+    static {
+        registerAlias("admin", "ENG-ADMIN-001");
+        registerAlias("zhang_jg", "ENG-2048");
+        registerAlias("li_sys", "ENG-3001");
+        registerAlias("wang_sim", "ENG-4002");
+        registerAlias("zhao_qual", "ENG-5003");
+        registerAlias("sun_proc", "ENG-6004");
+        registerAlias("qian_field", "ENG-7005");
+        registerAlias("ext_supplier", "ENG-EXT-01");
+        registerAlias("chief_designer", "ENG-CHIEF-01");
+        registerAlias("lead_analyst", "ENG-ANALYST-01");
+        registerAlias("process_engineer", "ENG-PROC-01");
+        registerAlias("quality_engineer", "ENG-QUAL-01");
+        registerAlias("project_manager", "ENG-PM-01");
+    }
+
+    private static void registerAlias(String username, String empId) {
+        USER_ALIAS_MAP.put(username.toLowerCase(), empId.toLowerCase());
+        USER_ALIAS_MAP.put(empId.toLowerCase(), username.toLowerCase());
+    }
+
+    public boolean isSameUser(String storedUserId, String targetUserId) {
+        if (storedUserId == null || targetUserId == null) {
+            return false;
+        }
+        if (storedUserId.equalsIgnoreCase(targetUserId)) {
+            return true;
+        }
+        String alias = USER_ALIAS_MAP.get(targetUserId.toLowerCase());
+        return alias != null && alias.equalsIgnoreCase(storedUserId);
+    }
+
     public Optional<MsgUserBoxEntity> findUserBoxById(Long userBoxId) {
         return Optional.ofNullable(userBoxStore.get(userBoxId));
     }
 
     public Optional<MsgUserBoxEntity> findUserBoxByUserAndMessage(String userId, Long messageId) {
         return userBoxStore.values().stream()
-                .filter(b -> b.getUserId().equals(userId) && b.getMessageId().equals(messageId))
+                .filter(b -> isSameUser(b.getUserId(), userId) && b.getMessageId().equals(messageId))
                 .findFirst();
     }
 
     public List<MsgUserBoxEntity> findUserBoxes(String userId, MailboxBoxType boxType, Boolean isRead, Boolean isStarred) {
         return userBoxStore.values().stream()
-                .filter(b -> b.getUserId().equals(userId))
+                .filter(b -> isSameUser(b.getUserId(), userId))
                 .filter(b -> boxType == null || b.getBoxType() == boxType)
                 .filter(b -> isRead == null || b.getIsRead().equals(isRead))
                 .filter(b -> isStarred == null || b.getIsStarred().equals(isStarred))

@@ -203,4 +203,39 @@ class MessageServiceTest {
         assertEquals("VMC_ENTERPRISE", detail.getRelatedProjectId());
         assertNotNull(detail.getTargetActionUrl());
     }
+
+    @Test
+    @DisplayName("TC-MSG-07: 用户工号与登录名双向兼容匹配与接收人查收测试")
+    void testTC_MSG_07_AliasCrossMatchingDeliveryAndQuery() {
+        SendManualMessageRequest request = new SendManualMessageRequest();
+        request.setRootCategory(MessageRootCategory.MANUAL);
+        request.setSubject("五轴主轴热补偿参数测试邮件");
+        request.setContent("<p>请张总查收新版五轴主轴热补偿方案。</p>");
+        request.setPriority(MessagePriority.HIGH);
+        request.setRelatedProjectId("VMC_ENTERPRISE");
+
+        // 投递时收件人指定工号 ENG-2048 (对应 zhang_jg)
+        SendManualMessageRequest.RecipientItem r1 = new SendManualMessageRequest.RecipientItem("ENG-2048", "张建国 (机械总工)", "TO");
+        request.setRecipients(Collections.singletonList(r1));
+
+        SendMessageResponse resp = service.sendManualMessage(request, "admin", "系统管理员");
+        assertNotNull(resp);
+
+        // 验证 1: 接收人使用登录名 zhang_jg 查询收件箱，必须能查看到发给 ENG-2048 的邮件
+        MailboxQueryParam queryParam = new MailboxQueryParam();
+        queryParam.setUserId("zhang_jg");
+        queryParam.setBoxType(MailboxBoxType.INBOX);
+        MailboxPageDto pageDto = service.queryUserMailbox(queryParam);
+        assertNotNull(pageDto);
+        boolean foundByUsername = pageDto.getItems().stream()
+                .anyMatch(item -> item.getMessageId().equals(resp.getMessageId()));
+        assertTrue(foundByUsername, "接收人使用登录名 zhang_jg 必须能查收发送至工号 ENG-2048 的邮件");
+
+        // 验证 2: 接收人使用登录名 zhang_jg 查看邮件详情
+        MessageDetailDto detail = service.getMessageDetail(resp.getMessageId(), "zhang_jg");
+        assertNotNull(detail);
+        assertEquals("五轴主轴热补偿参数测试邮件", detail.getSubject());
+        assertTrue(detail.getIsRead(), "查阅后自动标记为已读");
+    }
 }
+

@@ -47,15 +47,15 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserStore } from '@/stores/useUserStore';
+import { useMailboxStore, MailboxItem, BoxType, MessagePriority, MessageRootCategory } from '@/stores/useMailboxStore';
 
 const { Text, Title, Paragraph } = Typography;
 const { TextArea } = Input;
 
 // ==================== 数据契约定义 ====================
 
-export type BoxType = 'INBOX' | 'OUTBOX' | 'ARCHIVE' | 'TRASH';
-export type MessageRootCategory = 'SYSTEM' | 'MANUAL';
-export type MessagePriority = 'NORMAL' | 'HIGH' | 'URGENT';
+export type { BoxType, MessagePriority, MessageRootCategory };
+export type MailItem = MailboxItem;
 
 export interface AttachmentItem {
   attachmentId: number;
@@ -71,162 +71,28 @@ export interface RecipientItem {
   recipientType: 'TO' | 'CC' | 'BCC';
 }
 
-export interface MailItem {
-  messageId: number;
-  userBoxId: number;
-  rootCategory: MessageRootCategory;
-  systemType?: string;
-  subject: string;
-  content: string;
-  senderUserId: string;
-  senderUserName: string;
-  priority: MessagePriority;
-  relatedProjectId?: string;
-  relatedObjType?: string;
-  relatedObjId?: string;
-  targetActionUrl?: string;
-  actionIdentifier?: string;
-  isRead: boolean;
-  isStarred: boolean;
-  isArchived: boolean;
-  boxType: BoxType;
-  hasAttachment: boolean;
-  attachments?: AttachmentItem[];
-  recipients?: RecipientItem[];
-  createdAt: string;
-}
-
 interface MailboxPageProps {
   onNavigate?: (tab: string) => void;
 }
 
-// 模拟高端机床研发体系初始种子邮件数据（与数据库 V1.9.0 完全对齐）
-const INITIAL_MAIL_SEED: MailItem[] = [
-  {
-    messageId: 9001,
-    userBoxId: 9101,
-    rootCategory: 'SYSTEM',
-    systemType: 'CHANGE',
-    subject: '【变更协同】关于ECO-2026-0042(VMC1000主轴提速至15000rpm)的协同会签通知',
-    content: `
-      <p>尊敬的工程师：</p>
-      <p>工程变更单 <strong>ECO-2026-0042</strong>（VMC1000主轴提速至15000rpm工程实施与全生命周期现场处置单）已进入跨学科协同会签阶段。请机械、仿真及电气专业主管在收到本通知后3个工作日内完成影响分析及处置方案在线复核。</p>
-      <p><strong>关键变更要素：</strong></p>
-      <ul>
-        <li>主轴前端支撑轴承升级为超精密陶瓷球角接触轴承（M-VMC850-BRG-7014）；</li>
-        <li>主轴驱动电机功率由 15kW 增大至 18.5kW；</li>
-        <li>关联全机热平衡仿真校核工单（TC-SPINDLE-THERMAL）待复核签署。</li>
-      </ul>
-      <p>请点击下方“直达业务对象”按钮进入工程变更处理工作台完成会签签署。</p>
-    `,
-    senderUserId: 'SYSTEM_NOTIFIER',
-    senderUserName: '系统通知服务',
-    priority: 'HIGH',
-    relatedProjectId: 'VMC_ENTERPRISE',
-    relatedObjType: 'ECO',
-    relatedObjId: 'ECO-2026-0042',
-    targetActionUrl: '/change/eco/ECO-2026-0042',
-    actionIdentifier: 'ECO_COLLABORATION_REVIEW',
-    isRead: false,
-    isStarred: true,
-    isArchived: false,
-    boxType: 'INBOX',
-    hasAttachment: true,
-    attachments: [
-      {
-        attachmentId: 9201,
-        fileName: 'VMC1000_ECO_0042_Impact_Report.pdf',
-        fileSize: 2584100,
-        fileType: 'application/pdf',
-        downloadUrl: '/attachments/eco/VMC1000_ECO_0042_Impact_Report.pdf',
-      },
-    ],
-    recipients: [
-      { userId: 'chief_designer', userName: '总设计师', recipientType: 'TO' },
-      { userId: 'lead_analyst', userName: '仿真分析组长', recipientType: 'TO' },
-      { userId: 'admin', userName: '系统管理员', recipientType: 'CC' },
-    ],
-    createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-  },
-  {
-    messageId: 9002,
-    userBoxId: 9105,
-    rootCategory: 'SYSTEM',
-    systemType: 'GATE',
-    subject: '【阶段门预警】VMC1000项目 GATE-3(详细设计评审门) 临期倒计时预警',
-    content: `
-      <p>项目各主管：</p>
-      <p>型号项目 <strong>VMC_ENTERPRISE</strong> 关键节点 <strong>GATE-3(详细设计评审门)</strong> 计划于5个工作日后关闭。</p>
-      <p>目前仍有 <strong>1项关键交付物</strong>（全机热伸长有限元分析报告）处于签署中，门禁条件达成度为 85%。请各责任组加快流转，确保门禁条件准时达成，避免触发型号研发延期告警。</p>
-    `,
-    senderUserId: 'SYSTEM_NOTIFIER',
-    senderUserName: '系统通知服务',
-    priority: 'URGENT',
-    relatedProjectId: 'VMC_ENTERPRISE',
-    relatedObjType: 'GATE',
-    relatedObjId: 'GATE-3',
-    targetActionUrl: '/project/gate/GATE-3',
-    actionIdentifier: 'GATE_AUDIT_EXPEDITE',
-    isRead: false,
-    isStarred: false,
-    isArchived: false,
-    boxType: 'INBOX',
-    hasAttachment: false,
-    attachments: [],
-    recipients: [
-      { userId: 'project_manager', userName: '项目经理', recipientType: 'TO' },
-      { userId: 'chief_designer', userName: '总设计师', recipientType: 'TO' },
-      { userId: 'admin', userName: '系统管理员', recipientType: 'TO' },
-    ],
-    createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-  },
-  {
-    messageId: 9003,
-    userBoxId: 9108,
-    rootCategory: 'MANUAL',
-    systemType: 'TECHNICAL',
-    subject: '【技术交流】关于五轴联动叶片加工工艺参数优化的研讨纪要与试验排程',
-    content: `
-      <p>李总、各位工艺师：</p>
-      <p>附件为本周二关于五轴铣削钛合金叶片表面粗糙度提升的试验分析报告。初步测算在转速由 10,000 rpm 提升至 12,500 rpm 配合微量润滑 (MQL) 条件下，表面粗糙度可由 Ra 0.8 显著提升至 Ra 0.4。</p>
-      <p>请审阅试验数据，并安排下周二在五轴试验台进行二次样件试切验证。</p>
-    `,
-    senderUserId: 'lead_analyst',
-    senderUserName: '仿真分析组长',
-    priority: 'NORMAL',
-    relatedProjectId: 'VMC_ENTERPRISE',
-    relatedObjType: 'PROCESS',
-    relatedObjId: 'PROC-BLADE-001',
-    targetActionUrl: '/manufacturing/process/PROC-BLADE-001',
-    actionIdentifier: 'PROCESS_EXPERIMENT_SCHEDULE',
-    isRead: true,
-    isStarred: false,
-    isArchived: false,
-    boxType: 'INBOX',
-    hasAttachment: true,
-    attachments: [
-      {
-        attachmentId: 9202,
-        fileName: 'Blade_Milling_MQL_Test_Report.xlsx',
-        fileSize: 845200,
-        fileType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        downloadUrl: '/attachments/process/Blade_Milling_MQL_Test_Report.xlsx',
-      },
-    ],
-    recipients: [
-      { userId: 'chief_designer', userName: '总设计师', recipientType: 'TO' },
-      { userId: 'process_engineer', userName: '工艺主管工程师', recipientType: 'TO' },
-    ],
-    createdAt: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
-  },
-];
+
 
 export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
   const { user } = useAuthStore();
-  const currentUserId = user?.username || 'chief_designer';
+  const currentUsername = user?.username || 'chief_designer';
+  const currentUserJobNo = user?.userId || 'ENG-ADMIN-001';
+  const currentDisplayName = user?.realName || currentUsername;
 
-  // 状态维护
-  const [mails, setMails] = useState<MailItem[]>(INITIAL_MAIL_SEED);
+  // 全局邮件持久化与多播存储
+  const {
+    allMails,
+    fetchMailbox,
+    sendManualMail,
+    updateMailStatus,
+    getUserMails,
+    getUnreadCount,
+  } = useMailboxStore();
+
   const [activeBox, setActiveBox] = useState<BoxType>('INBOX');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [filterRead, setFilterRead] = useState<'ALL' | 'UNREAD' | 'STARRED'>('ALL');
@@ -251,64 +117,24 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
     fetchUsers();
   }, []);
 
-  // 尝试从真实 API 加载，网络异常自动保留内存 Seed 数据
+  // 尝试从真实 API 加载，网络异常自动保留本地已持久化数据
   useEffect(() => {
-    fetchMailboxFromApi();
-  }, [activeBox, currentUserId]);
+    fetchMailbox(currentUsername, currentUserJobNo, activeBox);
+  }, [activeBox, currentUsername, currentUserJobNo]);
 
-  const fetchMailboxFromApi = async () => {
-    try {
-      const res = await fetch(`/api/v1/messages/mailbox?boxType=${activeBox}&pageNum=1&pageSize=50`, {
-        headers: {
-          'X-Current-User-Id': currentUserId,
-        },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.data && Array.isArray(json.data.items) && json.data.items.length > 0) {
-          // 与后端同步
-          const apiMails: MailItem[] = json.data.items.map((item: any) => ({
-            messageId: item.messageId,
-            userBoxId: item.userBoxId || item.itemId,
-            rootCategory: item.rootCategory,
-            systemType: item.systemType || item.subType,
-            subject: item.subject,
-            content: item.content || item.bodyContent || '',
-            senderUserId: item.senderUserId || item.senderId,
-            senderUserName: item.senderUserName || item.senderDisplayName || '未知人员',
-            priority: item.priority || 'NORMAL',
-            relatedProjectId: item.relatedProjectId,
-            relatedObjType: item.relatedObjType || item.relatedObjectType,
-            relatedObjId: item.relatedObjId ? String(item.relatedObjId) : undefined,
-            targetActionUrl: item.targetActionUrl,
-            isRead: item.isRead,
-            isStarred: item.isStarred,
-            isArchived: item.isArchived,
-            boxType: activeBox,
-            hasAttachment: item.hasAttachment,
-            createdAt: item.createdAt,
-          }));
-          setMails(apiMails);
-          if (apiMails.length > 0 && !selectedMailId) {
-            setSelectedMailId(apiMails[0].messageId);
-          }
-        }
-      }
-    } catch {
-      // 离线环境静默降级为内存种子数据
-    }
-  };
-
-  // 统计各箱体未读数
+  // 统计当前用户各箱体未读数
   const unreadCount = useMemo(() => {
-    return mails.filter((m) => m.boxType === 'INBOX' && !m.isRead).length;
-  }, [mails]);
+    return getUnreadCount(currentUsername, currentUserJobNo);
+  }, [allMails, currentUsername, currentUserJobNo, getUnreadCount]);
+
+  // 获取当前用户在当前箱体中的邮件
+  const userBoxMails = useMemo(() => {
+    return getUserMails(currentUsername, currentUserJobNo, activeBox);
+  }, [allMails, currentUsername, currentUserJobNo, activeBox, getUserMails]);
 
   // 过滤后的列表
   const filteredMails = useMemo(() => {
-    return mails.filter((m) => {
-      if (m.boxType !== activeBox) return false;
-
+    return userBoxMails.filter((m) => {
       // 分类过滤
       if (selectedCategory !== 'ALL') {
         if (selectedCategory === 'MANUAL' && m.rootCategory !== 'MANUAL') return false;
@@ -332,12 +158,16 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
 
       return true;
     });
-  }, [mails, activeBox, selectedCategory, filterRead, searchKeyword]);
+  }, [userBoxMails, selectedCategory, filterRead, searchKeyword]);
 
   // 当前选中的邮件
   const selectedMail = useMemo(() => {
-    return mails.find((m) => m.messageId === selectedMailId) || null;
-  }, [mails, selectedMailId]);
+    if (selectedMailId) {
+      const found = filteredMails.find((m) => m.messageId === selectedMailId);
+      if (found) return found;
+    }
+    return filteredMails.length > 0 ? filteredMails[0] : null;
+  }, [filteredMails, selectedMailId]);
 
   // 选中邮件并自动标记为已读
   const handleSelectMail = (mail: MailItem) => {
@@ -349,58 +179,25 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
 
   // 标记已读/未读
   const markAsRead = async (messageId: number, isRead: boolean) => {
-    setMails((prev) =>
-      prev.map((m) => (m.messageId === messageId ? { ...m, isRead } : m))
-    );
-    try {
-      await fetch(`/api/v1/messages/${messageId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Current-User-Id': currentUserId },
-        body: JSON.stringify({ isRead }),
-      });
-    } catch {
-      // 离线降级
-    }
+    await updateMailStatus(messageId, currentUsername, { isRead });
   };
 
   // 切换星标
   const toggleStar = async (messageId: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const mail = mails.find((m) => m.messageId === messageId);
+    const mail = filteredMails.find((m) => m.messageId === messageId);
     if (!mail) return;
     const nextStarred = !mail.isStarred;
-
-    setMails((prev) =>
-      prev.map((m) => (m.messageId === messageId ? { ...m, isStarred: nextStarred } : m))
-    );
-
-    try {
-      await fetch(`/api/v1/messages/${messageId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Current-User-Id': currentUserId },
-        body: JSON.stringify({ isStarred: nextStarred }),
-      });
-      message.success(nextStarred ? '已添加星标' : '已取消星标');
-    } catch {
-      message.success(nextStarred ? '已添加星标(离线)' : '已取消星标(离线)');
-    }
+    await updateMailStatus(messageId, currentUsername, { isStarred: nextStarred });
+    message.success(nextStarred ? '已添加星标' : '已取消星标');
   };
 
   // 移动箱体（归档 / 移入废纸篓 / 恢复）
   const moveBox = async (messageId: number, targetBox: BoxType) => {
-    setMails((prev) =>
-      prev.map((m) => {
-        if (m.messageId === messageId) {
-          return {
-            ...m,
-            boxType: targetBox,
-            isArchived: targetBox === 'ARCHIVE',
-          };
-        }
-        return m;
-      })
-    );
-
+    await updateMailStatus(messageId, currentUsername, {
+      boxType: targetBox,
+      isArchived: targetBox === 'ARCHIVE',
+    });
     const actionText =
       targetBox === 'ARCHIVE'
         ? '已归档'
@@ -408,23 +205,15 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
         ? '已放入废纸篓'
         : '已移至收件箱';
     message.success(actionText);
-
-    try {
-      await fetch(`/api/v1/messages/${messageId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Current-User-Id': currentUserId },
-        body: JSON.stringify({ targetBoxType: targetBox }),
-      });
-    } catch {
-      // 离线降级
-    }
   };
 
   // 一键全部标为已读
-  const handleMarkAllRead = () => {
-    setMails((prev) =>
-      prev.map((m) => (m.boxType === activeBox ? { ...m, isRead: true } : m))
-    );
+  const handleMarkAllRead = async () => {
+    for (const m of userBoxMails) {
+      if (!m.isRead) {
+        await updateMailStatus(m.messageId, currentUsername, { isRead: true });
+      }
+    }
     message.success('当前箱体所有邮件已全部标为已读');
   };
 
@@ -449,7 +238,7 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Current-User-Id': currentUserId,
+          'X-Current-User-Id': currentUsername,
         },
       });
 
@@ -487,73 +276,47 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
     }
   };
 
-  // 发送人工邮件
+  // 发送人工邮件（完整支持发件人发件箱与各接收人收件箱的多播投递 Fan-out）
   const handleSendManualMail = async (values: any) => {
     setComposeLoading(true);
     try {
-      const newId = Date.now();
-      const currentSenderName = user?.realName || '机床研发工程师';
-      const currentSenderId = user?.userId || currentUserId;
-
-      // 从已经创建的系统用户中精确匹配收件人
+      // 从已经创建的系统用户中精确匹配收件人，确保 userId 规范化为唯一用户名 username
       const resolvedRecipients = (values.recipients || []).map((identifier: string) => {
         const found = systemUsers.find(
           (u) => u.username === identifier || u.userId === identifier || u.email === identifier
         );
         return {
-          userId: found?.userId || identifier,
-          userName: found ? `${found.realName} (${found.username})` : identifier,
+          userId: found ? found.username : identifier,
+          userName: found ? `${found.realName} (@${found.username})` : identifier,
           recipientType: 'TO' as const,
         };
       });
 
-      const newMail: MailItem = {
-        messageId: newId,
-        userBoxId: newId + 1,
-        rootCategory: 'MANUAL',
-        systemType: 'TECHNICAL',
-        subject: values.subject,
-        content: `<p>${values.content.replace(/\n/g, '<br/>')}</p>`,
-        senderUserId: currentSenderId,
-        senderUserName: currentSenderName,
-        priority: values.priority || 'NORMAL',
-        relatedProjectId: values.relatedProjectId || 'VMC_ENTERPRISE',
-        relatedObjType: values.relatedObjType,
-        relatedObjId: values.relatedObjId,
-        targetActionUrl: values.targetActionUrl,
-        isRead: true,
-        isStarred: false,
-        isArchived: false,
-        boxType: 'OUTBOX',
-        hasAttachment: false,
-        createdAt: new Date().toISOString(),
-        recipients: resolvedRecipients,
-      };
-
-      // 尝试推送到后端
-      await fetch('/api/v1/messages/manual', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Current-User-Id': currentSenderId,
-          'X-Current-User-Name': encodeURIComponent(currentSenderName),
-        },
-        body: JSON.stringify({
+      const { messageId, recipientCount } = await sendManualMail(
+        {
           subject: values.subject,
           content: `<p>${values.content.replace(/\n/g, '<br/>')}</p>`,
-          priority: values.priority,
-          relatedProjectId: values.relatedProjectId,
+          priority: values.priority || 'NORMAL',
+          relatedProjectId: values.relatedProjectId || 'VMC_ENTERPRISE',
           relatedObjType: values.relatedObjType,
           relatedObjId: values.relatedObjId,
           targetActionUrl: values.targetActionUrl,
           recipients: resolvedRecipients,
-        }),
-      }).catch(() => null);
+        },
+        {
+          username: currentUsername,
+          realName: currentDisplayName,
+          userId: currentUserJobNo,
+        }
+      );
 
-      setMails((prev) => [newMail, ...prev]);
-      message.success('邮件发送成功！已写入发件箱并完成向选定系统用户的投递');
+      message.success(`邮件发送成功！已记入发件箱并完成向 ${recipientCount} 位系统用户的收件箱投递`);
       setIsComposeVisible(false);
       composeForm.resetFields();
+      setSelectedMailId(messageId);
+      setActiveBox('OUTBOX');
+    } catch (err: any) {
+      message.error(err.message || '邮件发送失败');
     } finally {
       setComposeLoading(false);
     }
@@ -601,7 +364,11 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
                 <Radio.Button value="UNAUTHORIZED">跨域未授权人员 (阻断拦截)</Radio.Button>
               </Radio.Group>
               <Tooltip title="刷新当前信箱">
-                <Button size="small" icon={<RefreshCw className="w-3.5 h-3.5" />} onClick={fetchMailboxFromApi}>
+                <Button
+                  size="small"
+                  icon={<RefreshCw className="w-3.5 h-3.5" />}
+                  onClick={() => fetchMailbox(currentUsername, currentUserJobNo, activeBox)}
+                >
                   刷新
                 </Button>
               </Tooltip>
