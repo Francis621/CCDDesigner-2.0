@@ -38,6 +38,7 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 
 // ==================== 数据接口定义 ====================
 
@@ -102,146 +103,17 @@ export interface SessionRevocationItem {
   createdAt: string;
 }
 
-// ==================== 离线备用初始种子数据 ====================
-
-const DEFAULT_USERS: SysUserItem[] = [
-  {
-    userId: 'ENG-ADMIN-001',
-    deptId: 100,
-    deptCode: 'DEPT-ADMIN',
-    deptName: '企业信息技术部 (IT & 运维)',
-    disciplineType: 'MANAGEMENT',
-    username: 'admin',
-    realName: '系统管理员 (IT)',
-    email: 'admin@ccddesigner.com',
-    mobile: '13800000001',
-    status: 'ACTIVE',
-    isExternal: false,
-    roleIds: ['SystemAdmin'],
-    roleNames: ['系统管理员'],
-    lastLoginAt: '2026-09-16 17:15:00',
-    createdAt: '2026-01-01',
-  },
-  {
-    userId: 'ENG-2048',
-    deptId: 200,
-    deptCode: 'DEPT-MECH',
-    deptName: '高端机床机械结构总体室',
-    disciplineType: 'MECHANICAL',
-    username: 'zhang_jg',
-    realName: '张建国 (机械总工)',
-    email: 'zhang_jg@ccddesigner.com',
-    mobile: '13800000002',
-    status: 'ACTIVE',
-    isExternal: false,
-    roleIds: ['ChiefMechanicalEngineer'],
-    roleNames: ['机械工程师'],
-    lastLoginAt: '2026-09-16 16:30:22',
-    createdAt: '2026-01-01',
-  },
-  {
-    userId: 'ENG-3001',
-    deptId: 400,
-    deptCode: 'DEPT-CTRL',
-    deptName: '数控系统与伺服控制研发室',
-    disciplineType: 'CONTROL',
-    username: 'li_sys',
-    realName: '李明 (系统架构师)',
-    email: 'li_ming@ccddesigner.com',
-    mobile: '13800000003',
-    status: 'ACTIVE',
-    isExternal: false,
-    roleIds: ['LeadSystemArchitect'],
-    roleNames: ['系统工程师与总体架构师'],
-    lastLoginAt: '2026-09-16 14:10:05',
-    createdAt: '2026-01-01',
-  },
-  {
-    userId: 'ENG-4002',
-    deptId: 500,
-    deptCode: 'DEPT-SIM',
-    deptName: '数字化工程仿真与多体动力学室',
-    disciplineType: 'SIMULATION',
-    username: 'wang_sim',
-    realName: '王强 (仿真工程师)',
-    email: 'wang_qiang@ccddesigner.com',
-    mobile: '13800000004',
-    status: 'ACTIVE',
-    isExternal: false,
-    roleIds: ['SimulationEngineer'],
-    roleNames: ['仿真工程师'],
-    lastLoginAt: '2026-09-16 11:20:00',
-    createdAt: '2026-01-01',
-  },
-  {
-    userId: 'ENG-5003',
-    deptId: 800,
-    deptCode: 'DEPT-QUAL',
-    deptName: '整机质量检验与适航认证部',
-    disciplineType: 'QUALITY',
-    username: 'zhao_qual',
-    realName: '赵晓华 (专职审查员)',
-    email: 'zhao_xh@ccddesigner.com',
-    mobile: '13800000005',
-    status: 'ACTIVE',
-    isExternal: false,
-    roleIds: ['QualityOfficer'],
-    roleNames: ['质量与服务工程师'],
-    lastLoginAt: '2026-09-16 09:45:10',
-    createdAt: '2026-01-01',
-  },
-  {
-    userId: 'ENG-6004',
-    deptId: 700,
-    deptCode: 'DEPT-PROC',
-    deptName: '制造工艺与工装工程部',
-    disciplineType: 'PROCESS',
-    username: 'sun_proc',
-    realName: '孙工 (工艺主管)',
-    email: 'sun_proc@ccddesigner.com',
-    mobile: '13800000006',
-    status: 'ACTIVE',
-    isExternal: false,
-    roleIds: ['ProcessEngineer'],
-    roleNames: ['工艺工程师'],
-    lastLoginAt: '2026-09-15 15:30:00',
-    createdAt: '2026-01-01',
-  },
-  {
-    userId: 'ENG-7005',
-    deptId: 700,
-    deptCode: 'DEPT-PROC',
-    deptName: '制造工艺与工装工程部',
-    disciplineType: 'PROCESS',
-    username: 'qian_field',
-    realName: '钱师傅 (车间装配工)',
-    email: 'qian_field@ccddesigner.com',
-    mobile: '13800000007',
-    status: 'ACTIVE',
-    isExternal: false,
-    roleIds: ['ShopFloorOperator'],
-    roleNames: ['车间装配工'],
-    lastLoginAt: '2026-09-15 08:20:00',
-    createdAt: '2026-01-01',
-  },
-  {
-    userId: 'ENG-EXT-01',
-    deptId: 200,
-    deptCode: 'DEPT-MECH',
-    deptName: '高端机床机械结构总体室',
-    disciplineType: 'MECHANICAL',
-    username: 'ext_supplier',
-    realName: '德国主轴外协专家',
-    email: 'spindle_ext@supplier.de',
-    mobile: '13900000008',
-    status: 'ACTIVE',
-    isExternal: true,
-    roleIds: ['ChiefMechanicalEngineer'],
-    roleNames: ['机械工程师'],
-    lastLoginAt: '2026-09-14 10:00:00',
-    createdAt: '2026-02-01',
-  },
-];
+// 全局职能角色与显示名称映射
+const ROLE_NAME_MAP: Record<string, string> = {
+  ChiefMechanicalEngineer: '机械工程师',
+  LeadSystemArchitect: '系统工程师',
+  SimulationEngineer: '仿真工程师',
+  ProcessEngineer: '工艺工程师',
+  QualityOfficer: '质量工程师',
+  ProductManager: '产品经理/需求工程师',
+  ShopFloorOperator: '车间装配工',
+  SystemAdmin: '系统管理员',
+};
 
 const DEFAULT_DEPARTMENTS: DepartmentItem[] = [
   { deptId: 100, deptCode: 'DEPT-ADMIN', deptName: '企业信息技术部 (IT & 运维)', disciplineType: 'MANAGEMENT', disciplineName: '综合管理与系统运维', userCount: 1 },
@@ -273,9 +145,9 @@ const DEFAULT_REVOCATIONS: SessionRevocationItem[] = [
 export const UserManagementPage: React.FC = () => {
   const { user, isAdmin, switchRole } = useAuthStore();
   const isSystemAdmin = isAdmin();
+  const { users, addUser, updateUserStatus, fetchUsers: fetchStoreUsers } = useUserStore();
 
   // 数据状态
-  const [users, setUsers] = useState<SysUserItem[]>(DEFAULT_USERS);
   const [departments, setDepartments] = useState<DepartmentItem[]>(DEFAULT_DEPARTMENTS);
   const [memberships, setMemberships] = useState<ProjectMembershipItem[]>(DEFAULT_MEMBERSHIPS);
   const [qualifications, setQualifications] = useState<QualificationItem[]>(DEFAULT_QUALIFICATIONS);
@@ -299,18 +171,14 @@ export const UserManagementPage: React.FC = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [usersRes, deptsRes, memsRes, qualsRes, revsRes] = await Promise.all([
-        fetch('/api/v1/users'),
+      fetchStoreUsers();
+      const [deptsRes, memsRes, qualsRes, revsRes] = await Promise.all([
         fetch('/api/v1/departments'),
         fetch('/api/v1/projects/100293810293/memberships'),
         fetch('/api/v1/users/ENG-5003/qualifications'),
         fetch('/api/v1/iam/revocations'),
       ]);
 
-      if (usersRes.ok) {
-        const u = await usersRes.json();
-        if (u.data && Array.isArray(u.data)) setUsers(u.data);
-      }
       if (deptsRes.ok) {
         const d = await deptsRes.json();
         if (d.data && Array.isArray(d.data)) setDepartments(d.data);
@@ -370,50 +238,30 @@ export const UserManagementPage: React.FC = () => {
   const handleCreateUserSubmit = async () => {
     try {
       const values = await createUserForm.validateFields();
-      const payload = {
-        userId: values.userId,
-        deptId: values.deptId,
-        username: values.username,
-        realName: values.realName,
-        email: values.email,
-        mobile: values.mobile,
-        isExternal: Boolean(values.isExternal),
-        roleIds: values.roleIds ? [values.roleIds] : ['ChiefMechanicalEngineer'],
-        password: values.password || 'Ccdd@2026!',
-      };
+      const targetDept = departments.find((d) => d.deptId === values.deptId);
+      const roleId = values.roleIds || 'ChiefMechanicalEngineer';
+      const roleName = ROLE_NAME_MAP[roleId] || '机械工程师';
 
-      try {
-        const res = await fetch('/api/v1/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          message.success(`用户 [${values.realName}] 创建成功！`);
-          setCreateUserModalOpen(false);
-          createUserForm.resetFields();
-          fetchAllData();
-          return;
-        }
-      } catch {}
-
-      // 离线降级
       const newUser: SysUserItem = {
         userId: values.userId,
         deptId: values.deptId,
-        deptName: departments.find((d) => d.deptId === values.deptId)?.deptName || '机械结构总体室',
+        deptCode: targetDept?.deptCode || 'DEPT-MECH',
+        deptName: targetDept?.deptName || '高端机床机械结构总体室',
+        disciplineType: targetDept?.disciplineType || 'MECHANICAL',
         username: values.username,
         realName: values.realName,
-        email: values.email,
+        email: values.email || `${values.username}@ccddesigner.com`,
         mobile: values.mobile,
         status: 'ACTIVE',
         isExternal: Boolean(values.isExternal),
-        roleIds: values.roleIds ? [values.roleIds] : ['ChiefMechanicalEngineer'],
-        roleNames: ['机械工程师'],
-        createdAt: '2026-09-16',
+        roleIds: [roleId],
+        roleNames: [roleName],
+        createdAt: new Date().toISOString().split('T')[0],
       };
-      setUsers([newUser, ...users]);
-      message.success(`用户 [${values.realName}] 已登记入库！`);
+
+      // 统一调用全局 store 进行写入与持久化
+      await addUser(newUser, values.password || 'Ccdd@2026!');
+      message.success(`用户 [${values.realName}] 已成功创建并登记入库！`);
       setCreateUserModalOpen(false);
       createUserForm.resetFields();
     } catch (err: any) {
@@ -425,22 +273,11 @@ export const UserManagementPage: React.FC = () => {
   // 2. 变更用户账号状态 (ACTIVE -> SUSPENDED -> DEACTIVATED)
   const handleChangeUserStatus = async (targetUser: SysUserItem, newStatus: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED') => {
     try {
-      const res = await fetch(`/api/v1/users/${targetUser.userId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetStatus: newStatus, reason: '管理员在控制台手动调整' }),
-      });
-      if (res.ok) {
-        message.success(`用户 [${targetUser.realName}] 状态已更新为: ${newStatus}`);
-        fetchAllData();
-        return;
-      }
-    } catch {}
-
-    setUsers((prev) =>
-      prev.map((u) => (u.userId === targetUser.userId ? { ...u, status: newStatus } : u))
-    );
-    message.success(`用户 [${targetUser.realName}] 状态已更新为: ${newStatus}`);
+      await updateUserStatus(targetUser.userId, newStatus);
+      message.success(`用户 [${targetUser.realName}] 账号状态已变更为: ${newStatus}`);
+    } catch (err: any) {
+      message.error('变更状态失败: ' + (err.message || '未知错误'));
+    }
   };
 
   // 3. 项目工作组成员指派

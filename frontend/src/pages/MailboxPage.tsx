@@ -46,6 +46,7 @@ import {
   Download,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 
 const { Text, Title, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -98,95 +99,6 @@ export interface MailItem {
 interface MailboxPageProps {
   onNavigate?: (tab: string) => void;
 }
-
-// ==================== 已创建系统用户选项定义 ====================
-export interface SystemUserOption {
-  userId: string;
-  deptId?: number;
-  deptName?: string;
-  username: string;
-  realName: string;
-  email: string;
-  mobile?: string;
-  status?: string;
-  roleNames?: string[];
-}
-
-// 统一对齐平台已创建代表性工程研制系统用户 (8大核心用户)
-export const DEFAULT_SYSTEM_USERS: SystemUserOption[] = [
-  {
-    userId: 'ENG-ADMIN-001',
-    deptId: 100,
-    deptName: '企业信息技术部 (IT & 运维)',
-    username: 'admin',
-    realName: '系统管理员 (IT)',
-    email: 'admin@ccddesigner.com',
-    roleNames: ['系统管理员'],
-  },
-  {
-    userId: 'ENG-2048',
-    deptId: 200,
-    deptName: '高端机床机械结构总体室',
-    username: 'zhang_jg',
-    realName: '张建国 (机械总工)',
-    email: 'zhang_jg@ccddesigner.com',
-    roleNames: ['机械工程师', '机械总工'],
-  },
-  {
-    userId: 'ENG-3001',
-    deptId: 400,
-    deptName: '数控系统与伺服控制研发室',
-    username: 'li_sys',
-    realName: '李明 (系统架构师)',
-    email: 'li_ming@ccddesigner.com',
-    roleNames: ['系统工程师与总体架构师'],
-  },
-  {
-    userId: 'ENG-4002',
-    deptId: 500,
-    deptName: '数字化工程仿真与多体动力学室',
-    username: 'wang_sim',
-    realName: '王强 (仿真工程师)',
-    email: 'wang_qiang@ccddesigner.com',
-    roleNames: ['仿真工程师'],
-  },
-  {
-    userId: 'ENG-5003',
-    deptId: 800,
-    deptName: '整机质量检验与适航认证部',
-    username: 'zhao_qual',
-    realName: '赵晓华 (专职审查员)',
-    email: 'zhao_xh@ccddesigner.com',
-    roleNames: ['质量与服务工程师', '专职审查员'],
-  },
-  {
-    userId: 'ENG-6004',
-    deptId: 700,
-    deptName: '制造工艺与工装工程部',
-    username: 'sun_proc',
-    realName: '孙工 (工艺主管)',
-    email: 'sun_proc@ccddesigner.com',
-    roleNames: ['工艺工程师'],
-  },
-  {
-    userId: 'ENG-7005',
-    deptId: 700,
-    deptName: '制造工艺与工装工程部',
-    username: 'qian_field',
-    realName: '钱师傅 (车间装配工)',
-    email: 'qian_field@ccddesigner.com',
-    roleNames: ['车间装配工'],
-  },
-  {
-    userId: 'ENG-EXT-01',
-    deptId: 200,
-    deptName: '高端机床机械结构总体室',
-    username: 'ext_supplier',
-    realName: '德国主轴外协专家',
-    email: 'spindle_ext@supplier.de',
-    roleNames: ['外协专家'],
-  },
-];
 
 // 模拟高端机床研发体系初始种子邮件数据（与数据库 V1.9.0 完全对齐）
 const INITIAL_MAIL_SEED: MailItem[] = [
@@ -326,28 +238,14 @@ export const MailboxPage: React.FC<MailboxPageProps> = ({ onNavigate }) => {
   const [securityBlockModalVisible, setSecurityBlockModalVisible] = useState<boolean>(false);
   const [securityBlockReason, setSecurityBlockReason] = useState<string>('');
 
-  // 已创建系统用户列表（用于内部邮件收件人精准指派）
-  const [systemUsers, setSystemUsers] = useState<SystemUserOption[]>(DEFAULT_SYSTEM_USERS);
+  // 从全局用户中心获取已创建系统用户（自动包含管理员手动创建的全部用户并持久化）
+  const { fetchUsers, getActiveUsers } = useUserStore();
+  const systemUsers = getActiveUsers();
 
   // 模拟当前用户的授权身份（用于展示 PBAC 跨域越权阻断测试）
   const [simulatedUserRole, setSimulatedUserRole] = useState<'AUTHORIZED' | 'UNAUTHORIZED'>('AUTHORIZED');
 
   const [composeForm] = Form.useForm();
-
-  // 获取平台已创建的真实系统用户
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch('/api/v1/users');
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.data && Array.isArray(json.data) && json.data.length > 0) {
-          setSystemUsers(json.data);
-        }
-      }
-    } catch {
-      // 离线沙箱保持种子用户
-    }
-  };
 
   useEffect(() => {
     fetchUsers();
