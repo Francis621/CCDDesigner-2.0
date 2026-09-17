@@ -27,6 +27,7 @@
         <module>ccdd-change-mgmt</module>
         <module>ccdd-iam</module>
         <module>ccdd-message</module>
+        <module>ccdd-workflow</module>
         <module>ccdd-application</module>
     </modules>
 
@@ -131,6 +132,11 @@
             <dependency>
                 <groupId>com.ccdd</groupId>
                 <artifactId>ccdd-message</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ccdd</groupId>
+                <artifactId>ccdd-workflow</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

@@ -12,6 +12,7 @@ import { BaselineManagementPage } from './pages/BaselineManagementPage';
 import { ChangeManagementPage } from './pages/ChangeManagementPage';
 import { UserManagementPage } from './pages/UserManagementPage';
 import { MailboxPage } from './pages/MailboxPage';
+import { WorkflowCenterPage } from './pages/WorkflowCenterPage';
 import { GenericModulePage } from './pages/GenericModulePage';
 
 export const App: React.FC = () => {
@@ -25,15 +26,8 @@ export const App: React.FC = () => {
       case 'mailbox':
         return <MailboxPage onNavigate={(tab) => setActiveTab(tab)} />;
       case 'my-tasks':
-        return (
-          <GenericModulePage
-            moduleKey="my-tasks"
-            moduleName="我的任务"
-            category="个人协同中心"
-            description="汇总个人待办的设计校审、MRR制造就绪签署、BOP工艺审查及仿真验证工单。"
-            onNavigate={setActiveTab}
-          />
-        );
+      case 'workflow-center':
+        return <WorkflowCenterPage onNavigate={(tab) => setActiveTab(tab)} />;
 
       // 2. 主干工程业务流程
       case 'order-mgmt':

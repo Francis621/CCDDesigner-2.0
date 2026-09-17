@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://ccdd.com/workflow">
+
+    <process id="PROC_ECO_CHANGE_APPROVAL" name="高端机床重大工程变更单(ECO)跨学科与CCB处置审批流" isExecutable="true">
+        
+        <startEvent id="startEcoEvent" name="提报ECO审批申请"/>
+        <sequenceFlow id="f_eco_1" sourceRef="startEcoEvent" targetRef="taskImpactAssessmentReview"/>
+
+        <!-- 节点1: 变更影响处置协同评估 -->
+        <userTask id="taskImpactAssessmentReview" name="跨学科变更影响评估复核" flowable:candidateGroups="ROLE_CHIEF_DESIGNER">
+            <extensionElements>
+                <flowable:taskListener event="create" delegateExpression="${soDTaskAssignmentListener}"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="f_eco_2" sourceRef="taskImpactAssessmentReview" targetRef="taskCcbCommitteeApproval"/>
+
+        <!-- 节点2: CCB 变更控制委员会终审 -->
+        <userTask id="taskCcbCommitteeApproval" name="CCB变更控制委员会决策签发" flowable:candidateGroups="ROLE_CHIEF_ENGINEER">
+            <extensionElements>
+                <flowable:taskListener event="create" delegateExpression="${soDTaskAssignmentListener}"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="f_eco_3" sourceRef="taskCcbCommitteeApproval" targetRef="gateCcbOutcome"/>
+
+        <!-- CCB 决议判定 -->
+        <exclusiveGateway id="gateCcbOutcome" name="CCB决议"/>
+        <sequenceFlow id="f_eco_pass" name="批准实施" sourceRef="gateCcbOutcome" targetRef="serviceEcoSignOff">
+            <conditionExpression xsi:type="tFormalExpression">${finalConclusion == 'APPROVED'}</conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="f_eco_reject" name="不予批准" sourceRef="gateCcbOutcome" targetRef="serviceEcoRejection">
+            <conditionExpression xsi:type="tFormalExpression">${finalConclusion == 'REJECTED'}</conditionExpression>
+        </sequenceFlow>
+
+        <!-- 服务任务: 签发 ECO 批准电子凭据 -->
+        <serviceTask id="serviceEcoSignOff" name="签发ECO决议证书" flowable:delegateExpression="${signOffDecisionDelegate}"/>
+        <sequenceFlow id="f_eco_end1" sourceRef="serviceEcoSignOff" targetRef="endEcoApproved"/>
+
+        <!-- 服务任务: 记录 ECO 驳回 -->
+        <serviceTask id="serviceEcoRejection" name="记录ECO驳回意见" flowable:delegateExpression="${signOffDecisionDelegate}"/>
+        <sequenceFlow id="f_eco_end2" sourceRef="serviceEcoRejection" targetRef="endEcoRejected"/>
+
+        <endEvent id="endEcoApproved" name="ECO变更生效批准"/>
+        <endEvent id="endEcoRejected" name="ECO变更请求关闭"/>
+
+    </process>
+
+</definitions>

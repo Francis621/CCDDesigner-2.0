@@ -71,6 +71,10 @@
             <artifactId>ccdd-message</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-workflow</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>

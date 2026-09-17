@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ccdd</groupId>
+        <artifactId>ccdd-parent</artifactId>
+        <version>2.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ccdd-workflow</artifactId>
+    <name>CCDDesigner 2.0 - Workflow and Engineering Approvals (M24)</name>
+    <description>M24 工作流与工程审批服务：Flowable 7.x 嵌入式集成、业务解耦只读凭证生成、快照哈希防篡改(AT-16)、SoD 职责分离防自审与两阶段幂等核销</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-security-pbac</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-iam</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ccdd</groupId>
+            <artifactId>ccdd-outbox</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        
+        <!-- Flowable 7.x 嵌入式轻量级 BPMN 流程引擎 Starter -->
+        <dependency>
+            <groupId>org.flowable</groupId>
+            <artifactId>flowable-spring-boot-starter-process</artifactId>
+            <version>7.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

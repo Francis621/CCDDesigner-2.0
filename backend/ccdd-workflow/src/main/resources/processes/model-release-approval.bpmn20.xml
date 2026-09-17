@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://ccdd.com/workflow">
+
+    <process id="PROC_MODEL_RELEASE_APPROVAL" name="数控机床多专业系统架构与接口定义四级受控会签流" isExecutable="true">
+        
+        <!-- 启动事件 -->
+        <startEvent id="startEvent" name="发起模型发布审查"/>
+        <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="parallelGatewaySplit"/>
+
+        <!-- 并行会签拆分网关 -->
+        <parallelGateway id="parallelGatewaySplit" name="跨专业并行会签"/>
+        <sequenceFlow id="flowToMech" sourceRef="parallelGatewaySplit" targetRef="taskMechReview"/>
+        <sequenceFlow id="flowToElec" sourceRef="parallelGatewaySplit" targetRef="taskElecReview"/>
+        <sequenceFlow id="flowToArch" sourceRef="parallelGatewaySplit" targetRef="taskArchReview"/>
+
+        <!-- 节点1: 机械专业审查 -->
+        <userTask id="taskMechReview" name="机械系统主管工程师审查" flowable:candidateGroups="ROLE_MECH_HEAD">
+            <extensionElements>
+                <flowable:taskListener event="create" delegateExpression="${soDTaskAssignmentListener}"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flowFromMech" sourceRef="taskMechReview" targetRef="parallelGatewayJoin"/>
+
+        <!-- 节点2: 电气控制审查 -->
+        <userTask id="taskElecReview" name="电气与伺服系统主管审查" flowable:candidateGroups="ROLE_ELEC_HEAD">
+            <extensionElements>
+                <flowable:taskListener event="create" delegateExpression="${soDTaskAssignmentListener}"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flowFromElec" sourceRef="taskElecReview" targetRef="parallelGatewayJoin"/>
+
+        <!-- 节点3: 系统架构审查 -->
+        <userTask id="taskArchReview" name="总师与系统架构师终审" flowable:candidateGroups="ROLE_CHIEF_ENGINEER">
+            <extensionElements>
+                <flowable:taskListener event="create" delegateExpression="${soDTaskAssignmentListener}"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flowFromArch" sourceRef="taskArchReview" targetRef="parallelGatewayJoin"/>
+
+        <!-- 并行汇聚网关 -->
+        <parallelGateway id="parallelGatewayJoin" name="会签汇总判定"/>
+        <sequenceFlow id="flowToDecisionGate" sourceRef="parallelGatewayJoin" targetRef="exclusiveDecisionGate"/>
+
+        <!-- 排他判定网关：一票否决或全票通过 -->
+        <exclusiveGateway id="exclusiveDecisionGate" name="判定结论"/>
+        <sequenceFlow id="flowApproved" name="全员通过" sourceRef="exclusiveDecisionGate" targetRef="serviceSignOffDecision">
+            <conditionExpression xsi:type="tFormalExpression">${finalConclusion == 'APPROVED'}</conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flowRejected" name="任一否决" sourceRef="exclusiveDecisionGate" targetRef="serviceRecordRejection">
+            <conditionExpression xsi:type="tFormalExpression">${finalConclusion == 'REJECTED'}</conditionExpression>
+        </sequenceFlow>
+
+        <!-- 服务任务1: 生成不可伪造电子签名凭据 (通过) -->
+        <serviceTask id="serviceSignOffDecision" name="签发电子签名决议凭据" flowable:delegateExpression="${signOffDecisionDelegate}"/>
+        <sequenceFlow id="flowFromSign" sourceRef="serviceSignOffDecision" targetRef="endEventApproved"/>
+
+        <!-- 服务任务2: 标记决议为 REJECTED -->
+        <serviceTask id="serviceRecordRejection" name="归档驳回决议" flowable:delegateExpression="${signOffDecisionDelegate}"/>
+        <sequenceFlow id="flowFromRej" sourceRef="serviceRecordRejection" targetRef="endEventRejected"/>
+
+        <!-- 结束事件 -->
+        <endEvent id="endEventApproved" name="发布审批通过"/>
+        <endEvent id="endEventRejected" name="发布审查驳回"/>
+
+    </process>
+
+</definitions>
