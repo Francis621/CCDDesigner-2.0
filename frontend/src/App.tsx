@@ -50,15 +50,7 @@ export const App: React.FC = () => {
       case 'project-delete':
         return <ProjectGateManagementPage activeSubAction="delete" onNavigateSubAction={setActiveTab} />;
       case 'process-mgmt':
-        return (
-          <GenericModulePage
-            moduleKey="process-mgmt"
-            moduleName="流程管理"
-            category="流程与质量部"
-            description="驱动 IPD 集成产品开发流程、三员审计签批、制造就绪审查流及异常仲裁机制。"
-            onNavigate={setActiveTab}
-          />
-        );
+        return <WorkflowCenterPage onNavigate={(tab) => setActiveTab(tab)} />;
       case 'system-design':
         return (
           <GenericModulePage

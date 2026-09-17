@@ -30,6 +30,7 @@ import {
   Users,
   UserCheck,
   Lock,
+  Workflow,
 } from 'lucide-react';
 import { useAuthStore, SecurityClassification } from '@/stores/useAuthStore';
 import { useProjectStore } from '@/stores/useProjectStore';
@@ -148,6 +149,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       key: 'process-mgmt',
       icon: <GitMerge className="w-4 h-4" />,
       label: '流程管理',
+      children: [
+        {
+          key: 'workflow-center',
+          icon: <Workflow className="w-4 h-4" />,
+          label: '工作流与审批',
+        },
+      ],
     },
     {
       key: 'system-design',
@@ -300,7 +308,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               theme="dark"
               mode="inline"
               selectedKeys={[currentTab]}
-              defaultOpenKeys={['project-mgmt', 'config-mgmt', 'product-config', 'process-design', 'document-mgmt']}
+              defaultOpenKeys={['project-mgmt', 'process-mgmt', 'config-mgmt', 'product-config', 'process-design', 'document-mgmt']}
               items={menuItems}
               onClick={handleMenuClick}
               className="bg-transparent border-r-0 text-xs"
