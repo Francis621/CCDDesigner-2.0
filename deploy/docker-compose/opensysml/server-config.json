@@ -1,0 +1,24 @@
+{
+  "serviceName": "OpenSysML-Validator-LSP",
+  "engineVersion": "v2026.09-sysml-grpc",
+  "stateless": true,
+  "grpc": {
+    "port": 50051,
+    "maxReceiveMessageLength": 67108864,
+    "keepAliveTimeSeconds": 60
+  },
+  "http": {
+    "port": 8086,
+    "healthEndpoint": "/health",
+    "validateEndpoint": "/api/v1/validate"
+  },
+  "concurrency": {
+    "workerThreads": 8,
+    "maxQueueSize": 500
+  },
+  "rules": {
+    "enforceStandardLibraryVersion": "SYSML_V2_STD_LIB_V2026_09",
+    "strictPortContractValidation": true,
+    "requireExplicitUnitBindings": true
+  }
+}

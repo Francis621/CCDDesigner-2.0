@@ -31,7 +31,14 @@ ccdd:
       endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
       access-key: ${MINIO_ACCESS_KEY:minioadmin}
       secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  syson:
+    endpoint: ${SYSON_ENDPOINT:http://localhost:8085}
+    db-url: jdbc:postgresql://${SYSON_DB_HOST:localhost}:${SYSON_DB_PORT:5434}/${SYSON_DB_NAME:syson_workspace_db}
+  opensysml:
+    grpc-endpoint: ${OPENSYSML_GRPC_ENDPOINT:localhost:50051}
+    http-endpoint: ${OPENSYSML_HTTP_ENDPOINT:http://localhost:8086}
   flexo:
+    mms-endpoint: ${FLEXO_MMS_ENDPOINT:http://localhost:8088}
     sparql-endpoint: ${FLEXO_SPARQL_ENDPOINT:http://localhost:8088/sparql}
   simulation:
     k8s:

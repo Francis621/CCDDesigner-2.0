@@ -1,0 +1,171 @@
+version: '3.8'
+
+# ==============================================================================
+# CCDDesigner 2.0 - MBSE 核心三基础组件 (SysON, OpenSysML, Flexo MMS) 纯容器化部署栈
+# 遵循规范:
+#   1. SysON: 容器化 Spring Boot + 静态前端，独立 PostgreSQL 实例垂直隔离
+#   2. OpenSysML: sysml-grpc 无状态容器，支持 docker compose up --scale opensysml=N 水平伸缩
+#   3. Flexo MMS: Docker Compose 官方部署栈 + Apache Jena Fuseki RDF 四元组存储，支持分片与读写分离
+# ==============================================================================
+
+networks:
+  ccdd-mbse-net:
+    name: ccdd-mbse-net
+    driver: bridge
+
+volumes:
+  syson_pg_data:
+    name: syson_pg_data
+  fuseki_tdb_data:
+    name: fuseki_tdb_data
+
+services:
+
+  # ----------------------------------------------------------------------------
+  # 1. SysON 独立 PostgreSQL 15 数据库实例 (按项目/租户垂直隔离)
+  # ----------------------------------------------------------------------------
+  syson-postgres:
+    image: postgres:15-alpine
+    container_name: ccdd-syson-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${SYSON_DB_NAME:-syson_workspace_db}
+      POSTGRES_USER: ${SYSON_DB_USER:-syson_admin}
+      POSTGRES_PASSWORD: ${SYSON_DB_PASSWORD:-syson_secure_pass_2026}
+    volumes:
+      - syson_pg_data:/var/lib/postgresql/data
+      - ./syson/init-syson-db.sql:/docker-entrypoint-initdb.d/init-syson-db.sql:ro
+    ports:
+      - "${SYSON_POSTGRES_PORT:-5434}:5432"
+    networks:
+      - ccdd-mbse-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SYSON_DB_USER:-syson_admin} -d ${SYSON_DB_NAME:-syson_workspace_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 2. SysON 容器化服务 (Spring Boot 后端 + Web 视口静态资源)
+  # ----------------------------------------------------------------------------
+  syson-server:
+    build:
+      context: ./syson
+      dockerfile: Dockerfile
+    image: ccddesigner/syson-server:2026.09
+    container_name: ccdd-syson-server
+    restart: unless-stopped
+    environment:
+      SYSON_SERVER_PORT: ${SYSON_SERVER_PORT:-8085}
+      SYSON_DB_HOST: syson-postgres
+      SYSON_DB_PORT: 5432
+      SYSON_DB_NAME: ${SYSON_DB_NAME:-syson_workspace_db}
+      SYSON_DB_USER: ${SYSON_DB_USER:-syson_admin}
+      SYSON_DB_PASSWORD: ${SYSON_DB_PASSWORD:-syson_secure_pass_2026}
+    ports:
+      - "${SYSON_SERVER_PORT:-8085}:8085"
+    depends_on:
+      syson-postgres:
+        condition: service_healthy
+    networks:
+      - ccdd-mbse-net
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8085/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # 3. OpenSysML sysml-grpc 无状态语义解析与诊断计算服务 (支持水平扩展伸缩)
+  # ----------------------------------------------------------------------------
+  opensysml:
+    build:
+      context: ./opensysml
+      dockerfile: Dockerfile
+    image: ccddesigner/opensysml-grpc:2026.09
+    restart: unless-stopped
+    environment:
+      OPENSYSML_GRPC_PORT: 50051
+      OPENSYSML_HTTP_PORT: 8086
+      OPENSYSML_WORKER_THREADS: ${OPENSYSML_WORKER_THREADS:-8}
+    ports:
+      - "${OPENSYSML_HTTP_PORT:-8086}:8086"
+      - "${OPENSYSML_GRPC_PORT:-50051}:50051"
+    networks:
+      - ccdd-mbse-net
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8086/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # 4. Apache Jena Fuseki RDF 四元组存储服务 (Flexo MMS 底座，支持读写分离/分片)
+  # ----------------------------------------------------------------------------
+  flexo-fuseki:
+    image: stain/jena-fuseki:latest
+    container_name: ccdd-flexo-fuseki
+    restart: unless-stopped
+    environment:
+      ADMIN_PASSWORD: ${FUSEKI_ADMIN_PASSWORD:-fuseki_admin_pass_2026}
+      JAVA_OPTIONS: "-Xmx2048m -Xms512m"
+    volumes:
+      - fuseki_tdb_data:/fuseki/databases
+      - ./flexo-mms/fuseki-config.ttl:/fuseki/configuration/ccdd-models.ttl:ro
+    ports:
+      - "${FUSEKI_SPARQL_PORT:-3030}:3030"
+    networks:
+      - ccdd-mbse-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3030/$/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 5. Flexo MMS Layer 1 官方部署栈 (SysML v2 标准模型服务与暂存流水线)
+  # ----------------------------------------------------------------------------
+  flexo-mms:
+    build:
+      context: ./flexo-mms
+      dockerfile: Dockerfile
+    image: ccddesigner/flexo-mms-layer1:2026.09
+    container_name: ccdd-flexo-mms
+    restart: unless-stopped
+    environment:
+      FLEXO_MMS_PORT: ${FLEXO_MMS_PORT:-8088}
+      FUSEKI_ENDPOINT: "http://flexo-fuseki:3030/ccdd-models"
+    ports:
+      - "${FLEXO_MMS_PORT:-8088}:8088"
+    depends_on:
+      - flexo-fuseki
+    networks:
+      - ccdd-mbse-net
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8088/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # 6. MBSE Gateway 统一接入网关与负载均衡器 (Nginx 反向代理)
+  # ----------------------------------------------------------------------------
+  mbse-gateway:
+    image: nginx:1.25-alpine
+    container_name: ccdd-mbse-gateway
+    restart: unless-stopped
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "${MBSE_GATEWAY_PORT:-8084}:8084"
+    depends_on:
+      - syson-server
+      - opensysml
+      - flexo-mms
+    networks:
+      - ccdd-mbse-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8084/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

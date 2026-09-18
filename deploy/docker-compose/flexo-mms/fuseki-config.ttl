@@ -1,0 +1,40 @@
+PREFIX :        <http://base/#>
+PREFIX fuseki:  <http://jena.apache.org/fuseki#>
+PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX ja:      <http://jena.hpl.hp.com/2005/11/Config#>
+PREFIX tdb2:    <http://jena.apache.org/2016/tdb#>
+
+# ==============================================================================
+# Apache Jena Fuseki SPARQL 1.1 Quad 存储服务核心配置 (Flexo MMS 依赖后端)
+# 支持读写分离与具名图 (Named Graphs: urn:ccdd:staging, urn:ccdd:production)
+# ==============================================================================
+
+[] rdf:type fuseki:Server ;
+   fuseki:services (
+     :ccdd_models_service
+   ) .
+
+# ------------------------------------------------------------------------------
+# CCDD-Models 服务端点定义
+# ------------------------------------------------------------------------------
+:ccdd_models_service rdf:type fuseki:Service ;
+    fuseki:name "ccdd-models" ;
+    # 读操作端点 (支持只读副本分发)
+    fuseki:serviceQuery "query" ;
+    fuseki:serviceQuery "sparql" ;
+    # 写操作端点 (SPARQL 1.1 Update)
+    fuseki:serviceUpdate "update" ;
+    # 图存储协议端点 (GSP - Graph Store Protocol)
+    fuseki:serviceUpload "upload" ;
+    fuseki:serviceReadWriteGraphStore "data" ;
+    fuseki:serviceReadGraphStore "get" ;
+    fuseki:dataset :ccdd_tdb_dataset .
+
+# ------------------------------------------------------------------------------
+# TDB2 持久化四元组存储定义 (支持事务与两阶段提交)
+# ------------------------------------------------------------------------------
+:ccdd_tdb_dataset rdf:type tdb2:DatasetTDB2 ;
+    tdb2:location "/fuseki/databases/ccdd-models" ;
+    # 启用联合图支持
+    tdb2:unionDefaultGraph true .

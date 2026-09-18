@@ -6,7 +6,7 @@ import {
 import {
   Cpu, Lock, Unlock, AlertTriangle,
   RefreshCw, Play, Send, FileCode, Layers, GitCommit,
-  Crosshair, ShieldCheck, Box, Zap, Database
+  Crosshair, ShieldCheck, Box, Zap, Database, Server
 } from 'lucide-react';
 import { useMbseWorkspaceStore } from '../stores/useMbseWorkspaceStore';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -977,6 +977,95 @@ export const MbseWorkspacePage: React.FC = () => {
                       </Card>
                     </Col>
                   </Row>
+                </div>
+              ),
+            },
+            {
+              key: 'deployment',
+              label: (
+                <span>
+                  <Server className="w-3.5 h-3.5 inline mr-1 text-blue-500" />
+                  各组件部署规范与容器拓扑
+                </span>
+              ),
+              children: (
+                <div style={{ fontSize: 12, color: '#475569' }}>
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Card
+                        size="small"
+                        title={
+                          <Space>
+                            <Tag color="blue">SysON</Tag>
+                            <span>建模创作环境</span>
+                          </Space>
+                        }
+                        extra={<Tag color="green">Docker 容器化</Tag>}
+                        style={{ borderRadius: 6 }}
+                      >
+                        <div>• <strong>部署形态</strong>: 容器化 Spring Boot + 静态前端资源</div>
+                        <div style={{ marginTop: 4 }}>• <strong>存储依赖</strong>: 独立 Postgres 实例 (<code>syson_db :5434</code>)</div>
+                        <div style={{ marginTop: 4 }}>• <strong>扩缩容策略</strong>: 按项目/租户垂直隔离，必要时分片</div>
+                        <div style={{ marginTop: 4 }}>• <strong>对外端口</strong>: Web/API <code>8085</code> | DB <code>5434</code></div>
+                        <div style={{ marginTop: 6, padding: '4px 8px', background: '#eff6ff', borderRadius: 4, fontSize: 11, color: '#1d4ed8' }}>
+                          容器服务: <code>syson-server</code>, <code>syson-postgres</code>
+                        </div>
+                      </Card>
+                    </Col>
+
+                    <Col span={8}>
+                      <Card
+                        size="small"
+                        title={
+                          <Space>
+                            <Tag color="purple">OpenSysML</Tag>
+                            <span>语义诊断计算服务</span>
+                          </Space>
+                        }
+                        extra={<Tag color="cyan">无状态水平扩展</Tag>}
+                        style={{ borderRadius: 6 }}
+                      >
+                        <div>• <strong>部署形态</strong>: <code>sysml-grpc</code> 容器，纯无状态</div>
+                        <div style={{ marginTop: 4 }}>• <strong>存储依赖</strong>: 无 (纯校验计算型服务)</div>
+                        <div style={{ marginTop: 4 }}>• <strong>扩缩容策略</strong>: 按请求量水平扩展 (<code>--scale opensysml=N</code>)</div>
+                        <div style={{ marginTop: 4 }}>• <strong>对外端口</strong>: gRPC <code>50051</code> | HTTP <code>8086</code></div>
+                        <div style={{ marginTop: 6, padding: '4px 8px', background: '#faf5ff', borderRadius: 4, fontSize: 11, color: '#7e22ce' }}>
+                          负载分发: Nginx 网关轮询 + 多容器弹性伸缩
+                        </div>
+                      </Card>
+                    </Col>
+
+                    <Col span={8}>
+                      <Card
+                        size="small"
+                        title={
+                          <Space>
+                            <Tag color="orange">Flexo MMS</Tag>
+                            <span>模型仓库与联邦服务</span>
+                          </Space>
+                        }
+                        extra={<Tag color="volcano">官方部署栈</Tag>}
+                        style={{ borderRadius: 6 }}
+                      >
+                        <div>• <strong>部署形态</strong>: Docker Compose 官方部署栈</div>
+                        <div style={{ marginTop: 4 }}>• <strong>存储依赖</strong>: Apache Jena Fuseki RDF 四元组存储</div>
+                        <div style={{ marginTop: 4 }}>• <strong>扩缩容策略</strong>: 按 Org/Repo 分片，读写分离</div>
+                        <div style={{ marginTop: 4 }}>• <strong>对外端口</strong>: Layer 1 <code>8088</code> | SPARQL <code>3030</code></div>
+                        <div style={{ marginTop: 6, padding: '4px 8px', background: '#fff7ed', borderRadius: 4, fontSize: 11, color: '#c2410c' }}>
+                          四元组具名图: <code>urn:ccdd:staging</code> / <code>production</code>
+                        </div>
+                      </Card>
+                    </Col>
+                  </Row>
+
+                  <div style={{ marginTop: 12, padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Space size="middle">
+                      <Tag color="geekblue">统一反向代理网关</Tag>
+                      <span>MBSE Gateway (Nginx) 监听端口: <code>8084</code></span>
+                      <span style={{ color: '#94a3b8' }}>| 路由: <code>/syson/</code>, <code>/opensysml/</code>, <code>/flexo/</code>, <code>/sparql/</code></span>
+                    </Space>
+                    <Tag color="blue">启停命令: ./deploy/scripts/deploy-local.sh up --scale 2</Tag>
+                  </div>
                 </div>
               ),
             },
