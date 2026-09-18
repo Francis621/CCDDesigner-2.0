@@ -198,6 +198,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       key: 'system-design',
       icon: <Cpu className="w-4 h-4" />,
       label: '系统设计',
+      children: [
+        {
+          key: 'system-modeling',
+          icon: <Box className="w-4 h-4" />,
+          label: '系统建模',
+        },
+        {
+          key: 'mbse-workspace',
+          icon: <Layers className="w-4 h-4" />,
+          label: 'MBSE 建模工作区',
+        },
+      ],
     },
     {
       key: 'product-platform',
@@ -344,8 +356,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             <Menu
               theme="dark"
               mode="inline"
-              selectedKeys={[currentTab]}
-              defaultOpenKeys={['project-mgmt', 'process-mgmt', 'config-mgmt', 'product-config', 'process-design', 'document-mgmt']}
+              selectedKeys={[currentTab === 'system-design' ? 'system-modeling' : currentTab]}
+              defaultOpenKeys={['project-mgmt', 'process-mgmt', 'system-design', 'config-mgmt', 'product-config', 'process-design', 'document-mgmt']}
               items={menuItems}
               onClick={handleMenuClick}
               className="bg-transparent border-r-0 text-xs"

@@ -15,6 +15,7 @@ import { MailboxPage } from './pages/MailboxPage';
 import { WorkflowCenterPage } from './pages/WorkflowCenterPage';
 import { GenericModulePage } from './pages/GenericModulePage';
 import { MbseWorkspacePage } from './pages/MbseWorkspacePage';
+import { SysonModelingPage } from './pages/SysonModelingPage';
 import { LoginPage } from './pages/LoginPage';
 import { useAuthStore } from './stores/useAuthStore';
 
@@ -55,7 +56,10 @@ export const App: React.FC = () => {
         return <ProjectGateManagementPage activeSubAction="delete" onNavigateSubAction={setActiveTab} />;
       case 'process-mgmt':
         return <WorkflowCenterPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'system-modeling':
       case 'system-design':
+        return <SysonModelingPage />;
+      case 'mbse-workspace':
         return <MbseWorkspacePage />;
       case 'product-platform':
         return (
