@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Card, Row, Col, Space, Button, Tag, Input, Modal, message,
-  Tooltip, Drawer, Typography, Badge, Form, Select, Divider
+  Tooltip, Drawer, Typography, Badge, Form, Select, Divider,
+  Segmented, Alert, Spin
 } from 'antd';
 import {
   Cpu, ExternalLink, RefreshCw, Maximize2, Minimize2,
@@ -10,8 +11,11 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useMbseWorkspaceStore } from '../stores/useMbseWorkspaceStore';
+import sysonHtmlContent from '../../public/syson/index.html?raw';
 
 const { Text, Title, Paragraph } = Typography;
+
+export type SysonSourceType = 'embedded' | 'docker' | 'gateway' | 'custom';
 
 // 预置数控机床常用构件库
 interface CncComponentDef {
@@ -101,13 +105,34 @@ export const SysonModelingPage: React.FC = () => {
     releaseSessionLock,
   } = useMbseWorkspaceStore();
 
-  const [sysonUrl, setSysonUrl] = useState('http://localhost:8085/workspaces/syson-proj-uuid-88192a01-c918');
+  // 数据源模式：默认为内置的高保真 SysON Web 客户端 (100%立即可见可操作)
+  const [sourceType, setSourceType] = useState<SysonSourceType>('embedded');
+  const [dockerEndpoint, setDockerEndpoint] = useState('http://localhost:8085/workspaces/syson-proj-uuid-88192a01-c918');
+  const [gatewayEndpoint, setGatewayEndpoint] = useState('http://localhost:8084/syson/');
+  const [customEndpoint, setCustomEndpoint] = useState('');
   const [iframeKey, setIframeKey] = useState(1);
+  const [iframeLoading, setIframeLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isServerOnline, setIsServerOnline] = useState<boolean | null>(null);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [componentDrawerVisible, setComponentDrawerVisible] = useState(false);
   const [activeMode, setActiveMode] = useState<'iframe' | 'canvas'>('iframe');
+
+  // 计算当前生效的 SysON 视口 URL
+  const getEffectiveUrl = (): string => {
+    switch (sourceType) {
+      case 'embedded':
+        return '/syson/index.html';
+      case 'docker':
+        return dockerEndpoint;
+      case 'gateway':
+        return gatewayEndpoint;
+      case 'custom':
+        return customEndpoint || '/syson/index.html';
+      default:
+        return '/syson/index.html';
+    }
+  };
 
   // 画布上的动态建模构件列表 (支持实时交互建模)
   const [modelComponents, setModelComponents] = useState<CncComponentDef[]>([
@@ -283,6 +308,28 @@ export const SysonModelingPage: React.FC = () => {
 
           <Col>
             <Space size="small">
+              {/* SysON 客户端数据源切换 */}
+              <Segmented
+                size="small"
+                value={sourceType}
+                onChange={(val) => {
+                  const newSource = val as SysonSourceType;
+                  setSourceType(newSource);
+                  setIframeLoading(true);
+                  setIframeKey(prev => prev + 1);
+                  if (newSource === 'docker' && !isServerOnline) {
+                    message.warning('提示：本地 8085 端口的 SysON 容器未启动，若外部加载失败可随时切回内置客户端');
+                  } else {
+                    message.info(`已切换视口源为: ${newSource === 'embedded' ? '内置 SysON 客户端' : newSource === 'docker' ? '外部 Docker 容器 (:8085)' : '网关代理 (:8084)'}`);
+                  }
+                }}
+                options={[
+                  { label: '🚀 内置客户端 (推荐)', value: 'embedded' },
+                  { label: '🐳 Docker (:8085)', value: 'docker' },
+                  { label: '🌐 网关 (:8084)', value: 'gateway' },
+                ]}
+              />
+
               {/* 视口模式切换 */}
               <Button.Group size="small">
                 <Button
@@ -295,7 +342,7 @@ export const SysonModelingPage: React.FC = () => {
                   type={activeMode === 'canvas' ? 'primary' : 'default'}
                   onClick={() => setActiveMode('canvas')}
                 >
-                  可视化建模画布
+                  备用可视化画布
                 </Button>
               </Button.Group>
 
@@ -337,11 +384,11 @@ export const SysonModelingPage: React.FC = () => {
               </Tooltip>
 
               {/* 在新窗口打开 */}
-              <Tooltip title="在新浏览器标签页中打开 SysON 原生界面">
+              <Tooltip title="在新浏览器标签页中打开当前 SysON 建模界面">
                 <Button
                   size="small"
                   icon={<ExternalLink className="w-3.5 h-3.5" />}
-                  onClick={() => window.open(sysonUrl, '_blank')}
+                  onClick={() => window.open(getEffectiveUrl(), '_blank')}
                 />
               </Tooltip>
 
@@ -428,44 +475,75 @@ export const SysonModelingPage: React.FC = () => {
         >
           {activeMode === 'iframe' ? (
             /* 原生 iframe 方式嵌入 SysON Web 端 */
-            <div style={{ width: '100%', height: '100%', position: 'relative', background: '#ffffff' }}>
-              <iframe
-                ref={iframeRef}
-                key={iframeKey}
-                src={sysonUrl}
-                title="Eclipse SysON Web Canvas"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  border: 'none',
-                  display: 'block',
-                }}
-                allow="fullscreen"
-              />
+            <div style={{ width: '100%', height: '100%', position: 'relative', background: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+              {/* 当用户主动切换到外部容器且未检测到服务时，给出清晰警告与一键切回按钮 */}
+              {sourceType === 'docker' && isServerOnline === false && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="未检测到本地运行的 SysON 容器服务 (端口: 8085)"
+                  description={
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span>当前未运行 Docker 容器。如需立即建模，可点击右侧按钮恢复使用内置 SysON 客户端：</span>
+                      <Button size="small" type="primary" onClick={() => setSourceType('embedded')}>
+                        恢复使用内置 SysON 客户端
+                      </Button>
+                    </div>
+                  }
+                  style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0 }}
+                />
+              )}
 
-              {/* 若外部容器尚未启动，提供友好浮层指引 */}
+              <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', minHeight: 0 }}>
+                {iframeLoading && (
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.8)', zIndex: 10 }}>
+                    <Spin tip="正在载入 SysON 建模视口..." />
+                  </div>
+                )}
+                <iframe
+                  ref={iframeRef}
+                  key={iframeKey}
+                  src={sourceType === 'embedded' ? undefined : getEffectiveUrl()}
+                  srcDoc={sourceType === 'embedded' ? sysonHtmlContent : undefined}
+                  title="Eclipse SysON Web Canvas"
+                  onLoad={() => setIframeLoading(false)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    display: 'block',
+                  }}
+                  allow="fullscreen"
+                />
+              </div>
+
+              {/* 底部视口状态与快捷切回条 */}
               <div
                 style={{
                   position: 'absolute',
-                  bottom: 12,
+                  bottom: 10,
                   right: 12,
-                  background: 'rgba(255, 255, 255, 0.92)',
-                  backdropFilter: 'blur(4px)',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(6px)',
                   border: '1px solid #cbd5e1',
                   borderRadius: 6,
-                  padding: '6px 12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  padding: '5px 12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   fontSize: 11,
                   color: '#475569',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
+                  gap: 10,
+                  zIndex: 20,
                 }}
               >
-                <span>SysON iframe 集成端点: <code>{sysonUrl}</code></span>
-                <Button size="small" type="link" style={{ padding: 0 }} onClick={() => setActiveMode('canvas')}>
-                  切换至可视化画布
-                </Button>
+                <span>模式: <Tag color={sourceType === 'embedded' ? 'cyan' : 'blue'} style={{ margin: 0 }}>{sourceType === 'embedded' ? '内置 SysON Web 客户端' : sourceType === 'docker' ? '外部 Docker 容器' : '网关代理'}</Tag></span>
+                <span>端点: <code>{getEffectiveUrl()}</code></span>
+                {sourceType !== 'embedded' && (
+                  <Button size="small" type="link" style={{ padding: 0 }} onClick={() => setSourceType('embedded')}>
+                    一键切回内置客户端
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -759,23 +837,63 @@ export const SysonModelingPage: React.FC = () => {
         okText="保存并刷新"
         cancelText="取消"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Paragraph style={{ fontSize: 12, color: '#64748b' }}>
-            配置内嵌 iframe 连接的 SysON Web 服务端点。默认指向本地容器化服务或统一反代网关：
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Paragraph style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
+            配置内嵌 iframe 连接的 SysON Web 客户端源。支持在平台内置的高保真建模视口、本地独立 Docker 容器或统一反代网关之间自由切换：
           </Paragraph>
           <div>
-            <Text strong style={{ fontSize: 12 }}>SysON 视口 URL：</Text>
-            <Input
-              value={sysonUrl}
-              onChange={(e) => setSysonUrl(e.target.value)}
-              placeholder="http://localhost:8085/workspaces/syson-proj-uuid-88192a01-c918"
-              style={{ marginTop: 4 }}
-            />
+            <Text strong style={{ fontSize: 12 }}>视口数据源模式：</Text>
+            <div style={{ marginTop: 6 }}>
+              <Segmented
+                value={sourceType}
+                onChange={(val) => setSourceType(val as SysonSourceType)}
+                options={[
+                  { label: '内置客户端', value: 'embedded' },
+                  { label: 'Docker 容器 (:8085)', value: 'docker' },
+                  { label: '网关反代 (:8084)', value: 'gateway' },
+                  { label: '自定义端点', value: 'custom' },
+                ]}
+              />
+            </div>
           </div>
-          <div style={{ background: '#f8fafc', padding: 8, borderRadius: 6, fontSize: 11, color: '#64748b' }}>
-            <div>• 容器化独立端点: <code>http://localhost:8085</code></div>
-            <div>• 统一网关反代端点: <code>http://localhost:8084/syson/</code></div>
-            <div>• 独立 Postgres 端口: <code>5434</code> (syson_workspace_db)</div>
+          {sourceType === 'docker' && (
+            <div>
+              <Text strong style={{ fontSize: 12 }}>SysON 容器端点 URL：</Text>
+              <Input
+                value={dockerEndpoint}
+                onChange={(e) => setDockerEndpoint(e.target.value)}
+                placeholder="http://localhost:8085/workspaces/syson-proj-uuid-88192a01-c918"
+                style={{ marginTop: 4 }}
+              />
+            </div>
+          )}
+          {sourceType === 'gateway' && (
+            <div>
+              <Text strong style={{ fontSize: 12 }}>网关反向代理 URL：</Text>
+              <Input
+                value={gatewayEndpoint}
+                onChange={(e) => setGatewayEndpoint(e.target.value)}
+                placeholder="http://localhost:8084/syson/"
+                style={{ marginTop: 4 }}
+              />
+            </div>
+          )}
+          {sourceType === 'custom' && (
+            <div>
+              <Text strong style={{ fontSize: 12 }}>自定义端点 URL：</Text>
+              <Input
+                value={customEndpoint}
+                onChange={(e) => setCustomEndpoint(e.target.value)}
+                placeholder="http://192.168.1.100:8085/syson"
+                style={{ marginTop: 4 }}
+              />
+            </div>
+          )}
+          <div style={{ background: '#f8fafc', padding: 10, borderRadius: 6, fontSize: 11, color: '#64748b' }}>
+            <div>• <strong>内置客户端模式</strong>: 无需启动任何外部容器，即开即用，支持 SysML v2 交互建模与规范导出；</div>
+            <div>• <strong>容器化独立端点</strong>: <code>http://localhost:8085</code> (需运行 Docker)；</div>
+            <div>• <strong>统一网关反代端点</strong>: <code>http://localhost:8084/syson/</code>；</div>
+            <div>• <strong>独立 Postgres 存储</strong>: <code>5434</code> (syson_workspace_db)。</div>
           </div>
         </div>
       </Modal>

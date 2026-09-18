@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eclipse SysON - Graphical SysML v2 Modeling Studio</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 13px;
+      color: #1e293b;
+      background-color: #f8fafc;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    /* 顶部导航与品牌栏 */
+    .syson-header {
+      height: 46px;
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid #334155;
+      flex-shrink: 0;
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      color: #38bdf8;
+      letter-spacing: 0.5px;
+    }
+    .brand-badge {
+      background: #0284c7;
+      color: #fff;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .project-title {
+      font-size: 12px;
+      color: #94a3b8;
+      border-left: 1px solid #334155;
+      padding-left: 12px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-header {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #e2e8f0;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-header:hover {
+      background: #334155;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    .btn-header.primary {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+    }
+    .btn-header.primary:hover {
+      background: #0369a1;
+    }
+
+    /* 工具栏快捷操作 */
+    .syson-toolbar {
+      height: 38px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tool-item {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #475569;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+    .tool-item:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    .tool-item.active {
+      background: #e0f2fe;
+      border-color: #7dd3fc;
+      color: #0369a1;
+      font-weight: 600;
+    }
+    .toolbar-divider {
+      width: 1px;
+      height: 18px;
+      background: #cbd5e1;
+      margin: 0 4px;
+    }
+
+    /* 主工作区布局：左侧资源树、中央画布、右侧属性栏 */
+    .syson-workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 左侧模型导航与构件库 */
+    .syson-sidebar-left {
+      width: 240px;
+      background: #ffffff;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .panel-header {
+      height: 34px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 12px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .tree-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .tree-node {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #334155;
+      transition: background 0.15s;
+    }
+    .tree-node:hover {
+      background: #f1f5f9;
+    }
+    .tree-node.active {
+      background: #e0f2fe;
+      color: #0284c7;
+      font-weight: 600;
+    }
+    .tree-node.indent-1 { padding-left: 18px; }
+    .tree-node.indent-2 { padding-left: 28px; }
+
+    /* 建模图元调色板 (Palette) */
+    .palette-box {
+      border-top: 1px solid #e2e8f0;
+      padding: 8px 12px;
+      background: #f8fafc;
+    }
+    .palette-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .palette-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .palette-item {
+      background: #ffffff;
+      border: 1px dashed #cbd5e1;
+      border-radius: 4px;
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 11px;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .palette-item:hover {
+      border-color: #0284c7;
+      background: #f0f9ff;
+      color: #0284c7;
+      transform: translateY(-1px);
+    }
+
+    /* 中央主画布区域 */
+    .syson-canvas-container {
+      flex: 1;
+      position: relative;
+      background-color: #f8fafc;
+      background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+      background-size: 20px 20px;
+      overflow: auto;
+      cursor: default;
+    }
+    .diagram-svg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2000px;
+      height: 1400px;
+      pointer-events: none;
+    }
+    .canvas-content {
+      position: relative;
+      width: 2000px;
+      height: 1400px;
+    }
+
+    /* SysML v2 块图元素样式 */
+    .sysml-block {
+      position: absolute;
+      width: 220px;
+      background: #ffffff;
+      border: 1.5px solid #0284c7;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      cursor: move;
+      transition: box-shadow 0.2s, border-color 0.2s;
+      user-select: none;
+      z-index: 10;
+    }
+    .sysml-block:hover {
+      box-shadow: 0 8px 20px rgba(2, 132, 199, 0.18);
+    }
+    .sysml-block.selected {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25), 0 8px 24px rgba(15, 23, 42, 0.12);
+    }
+    .block-header {
+      background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
+      padding: 8px 10px;
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
+      border-bottom: 1px solid #bae6fd;
+    }
+    .block-stereotype {
+      font-size: 10px;
+      color: #0369a1;
+      font-style: italic;
+      text-align: center;
+    }
+    .block-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0c4a6e;
+      text-align: center;
+      margin-top: 2px;
+    }
+    .block-package {
+      font-size: 9px;
+      color: #64748b;
+      text-align: center;
+    }
+    .block-body {
+      padding: 8px 10px;
+      font-size: 11px;
+    }
+    .block-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: #475569;
+      text-transform: uppercase;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+    .attr-row {
+      display: flex;
+      justify-content: space-between;
+      color: #334155;
+      font-family: monospace;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .port-tag {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #0284c7;
+      border: 1px solid #cbd5e1;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      margin: 2px 0;
+      font-family: monospace;
+    }
+
+    /* 右侧属性检查与语义诊断栏 */
+    .syson-sidebar-right {
+      width: 270px;
+      background: #ffffff;
+      border-left: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .prop-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+    .prop-group {
+      margin-bottom: 14px;
+    }
+    .prop-label {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .prop-input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #0f172a;
+      outline: none;
+      transition: border 0.15s;
+    }
+    .prop-input:focus {
+      border-color: #0284c7;
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+    }
+    .semantic-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      font-weight: 500;
+    }
+
+    /* 底部代码预览面板 */
+    .syson-bottom-drawer {
+      height: 150px;
+      background: #0f172a;
+      border-top: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .drawer-header {
+      height: 28px;
+      background: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .code-view {
+      flex: 1;
+      overflow: auto;
+      padding: 8px 12px;
+      font-family: "Fira Code", Monaco, Consolas, monospace;
+      font-size: 11px;
+      color: #38bdf8;
+      line-height: 1.5;
+      white-space: pre;
+    }
+    .watermark {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid #cbd5e1;
+      backdrop-filter: blur(4px);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: #64748b;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. 顶部 SysON 品牌与工程控制栏 -->
+  <header class="syson-header">
+    <div class="brand-group">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="m4.93 4.93 4.24 4.24"></path>
+          <path d="m14.83 9.17 4.24-4.24"></path>
+          <path d="m14.83 14.83 4.24 4.24"></path>
+          <path d="m9.17 14.83-4.24 4.24"></path>
+          <circle cx="12" cy="12" r="4"></circle>
+        </svg>
+        Eclipse SysON™
+      </div>
+      <span class="brand-badge">SysML v2 Studio</span>
+      <span class="project-title">项目: VMC1000 五轴加工中心正向机电控制架构</span>
+    </div>
+
+    <div class="header-actions">
+      <span style="font-size: 11px; color: #4ade80; display: flex; align-items: center; gap: 5px;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></span>
+        SysON 建模内核已就绪
+      </span>
+      <button class="btn-header" onclick="reLayoutCanvas()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+        自动排版 (Auto-Layout)
+      </button>
+      <button class="btn-header primary" onclick="exportSysmlCode()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        导出 SysML v2 规范
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. 二级建模工具栏 -->
+  <div class="syson-toolbar">
+    <div class="toolbar-left">
+      <div class="tool-item active" id="tool-select" onclick="selectTool('select')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path></svg>
+        选择/指针
+      </div>
+      <div class="tool-item" id="tool-conn" onclick="selectTool('conn')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        连线/装配 (Connection)
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="tool-item" onclick="addNewBlock('elem_rotary_axis', 'A_Axis_RotaryTable', '五轴回转摆头A轴', 'Kinematics_Pkg', { maxTiltAngle: '+/-110 deg', torque: '1200 N.m' })">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        添加 Part (部件)
+      </div>
+      <div class="tool-item" onclick="zoomCanvas(0.1)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+        放大
+      </div>
+      <div class="tool-item" onclick="zoomCanvas(-0.1)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+        缩小
+      </div>
+      <div class="tool-item" onclick="resetZoom()">
+        重置 100%
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <span style="font-size: 11px; color: #64748b;">视图模式: <strong>Internal Block Diagram (IBD)</strong></span>
+    </div>
+  </div>
+
+  <!-- 3. 三栏工作区 -->
+  <div class="syson-workspace">
+    <!-- 左侧：模型导航树与图元调色板 -->
+    <aside class="syson-sidebar-left">
+      <div class="panel-header">
+        <span>模型资源导航 (Explorer)</span>
+        <span style="font-size: 10px; color: #94a3b8;">SysML v2</span>
+      </div>
+      <div class="tree-scroll">
+        <div class="tree-node active">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <strong>VMC1000_RootPkg</strong>
+        </div>
+        <div class="tree-node indent-1" onclick="selectBlock('elem_spindle')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+          HighSpeedSpindle
+        </div>
+        <div class="tree-node indent-1" onclick="selectBlock('elem_x_feed')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+          XAxisFeedDrive
+        </div>
+        <div class="tree-node indent-1" onclick="selectBlock('elem_cnc_ctrl')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+          Cnc840DController
+        </div>
+        <div class="tree-node indent-1" onclick="selectBlock('elem_opt_fiber')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+          ThermalSensorUnit
+        </div>
+      </div>
+
+      <!-- 快速图元调色板 (Palette) -->
+      <div class="palette-box">
+        <div class="palette-title">SysON 建模图元调色板</div>
+        <div class="palette-grid">
+          <div class="palette-item" onclick="addNewBlock('elem_b_axis', 'B_Axis_TiltingHead', '摆动B轴回转头', 'Kinematics', { tiltRange: '-30/+120' })">
+            + Part Def
+          </div>
+          <div class="palette-item" onclick="addNewBlock('elem_coolant', 'SpindleCoolingUnit', '主轴油气润滑冷却单元', 'CoolingSys', { flowRate: '12 L/min' })">
+            + Item Def
+          </div>
+          <div class="palette-item" onclick="addNewBlock('elem_encoder', 'HeidenhainGrating', '海德汉高精度光栅尺', 'Feedback', { resolution: '0.001 um' })">
+            + Sensor Def
+          </div>
+          <div class="palette-item" onclick="addNewBlock('elem_servo', 'Simotics_1FT7_Motor', '同步伺服驱动电机', 'Electrical', { power: '7.5 kW' })">
+            + Actuator
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 中央：图形化 SysON Diagram 建模画布 -->
+    <main class="syson-canvas-container" id="canvas-container">
+      <div class="watermark">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>Eclipse SysON 原生 Web 视口交互模式</span>
+      </div>
+
+      <div class="canvas-content" id="canvas-content">
+        <!-- SVG 连线层 -->
+        <svg class="diagram-svg-layer" id="svg-layer">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 8 5 L 0 9 z" fill="#0284c7" />
+            </marker>
+          </defs>
+        </svg>
+
+        <!-- 块 1：HighSpeedSpindle -->
+        <div class="sysml-block" id="elem_spindle" style="top: 80px; left: 100px;" onmousedown="startDrag(event, 'elem_spindle')">
+          <div class="block-header">
+            <div class="block-stereotype">«part def»</div>
+            <div class="block-title">HighSpeedSpindle</div>
+            <div class="block-package">pkg: Spindle_Subsystem</div>
+          </div>
+          <div class="block-body">
+            <div class="block-section-title">Attributes (属性)</div>
+            <div class="attr-row"><span>maxRpm:</span><strong>18000 rpm</strong></div>
+            <div class="attr-row"><span>ratedPower:</span><strong>24 kW</strong></div>
+            <div class="attr-row"><span>coolingMethod:</span><strong>'Oil-Air'</strong></div>
+            <div class="block-section-title" style="margin-top: 6px;">Ports (接口)</div>
+            <div class="port-tag">spindleShaftPort</div>
+            <div class="port-tag">thermalSensorIn</div>
+          </div>
+        </div>
+
+        <!-- 块 2：XAxisFeedDrive -->
+        <div class="sysml-block" id="elem_x_feed" style="top: 80px; left: 420px;" onmousedown="startDrag(event, 'elem_x_feed')">
+          <div class="block-header">
+            <div class="block-stereotype">«part def»</div>
+            <div class="block-title">XAxisFeedDrive</div>
+            <div class="block-package">pkg: FeedDrive_Axis</div>
+          </div>
+          <div class="block-body">
+            <div class="block-section-title">Attributes (属性)</div>
+            <div class="attr-row"><span>strokeLength:</span><strong>1050 mm</strong></div>
+            <div class="attr-row"><span>rapidTraverse:</span><strong>48 m/min</strong></div>
+            <div class="attr-row"><span>screwPitch:</span><strong>12 mm</strong></div>
+            <div class="block-section-title" style="margin-top: 6px;">Ports (接口)</div>
+            <div class="port-tag">servoCommandPort</div>
+            <div class="port-tag">scaleFeedbackPort</div>
+          </div>
+        </div>
+
+        <!-- 块 3：Cnc840DController -->
+        <div class="sysml-block" id="elem_cnc_ctrl" style="top: 360px; left: 260px;" onmousedown="startDrag(event, 'elem_cnc_ctrl')">
+          <div class="block-header">
+            <div class="block-stereotype">«part def»</div>
+            <div class="block-title">Cnc840DController</div>
+            <div class="block-package">pkg: Control_Architecture</div>
+          </div>
+          <div class="block-body">
+            <div class="block-section-title">Attributes (属性)</div>
+            <div class="attr-row"><span>interpolCycle:</span><strong>1 ms</strong></div>
+            <div class="attr-row"><span>rtChannels:</span><strong>5 Axes</strong></div>
+            <div class="attr-row"><span>hscAlgo:</span><strong>'TopSurface-V2'</strong></div>
+            <div class="block-section-title" style="margin-top: 6px;">Ports (接口)</div>
+            <div class="port-tag">motionBusOut</div>
+            <div class="port-tag">thermalCompSync</div>
+          </div>
+        </div>
+
+        <!-- 块 4：ThermalSensorUnit -->
+        <div class="sysml-block" id="elem_opt_fiber" style="top: 360px; left: 580px;" onmousedown="startDrag(event, 'elem_opt_fiber')">
+          <div class="block-header">
+            <div class="block-stereotype">«part def»</div>
+            <div class="block-title">ThermalSensorUnit</div>
+            <div class="block-package">pkg: Sensor_Network</div>
+          </div>
+          <div class="block-body">
+            <div class="block-section-title">Attributes (属性)</div>
+            <div class="attr-row"><span>sensorCount:</span><strong>8 FBG</strong></div>
+            <div class="attr-row"><span>samplingRate:</span><strong>100 Hz</strong></div>
+            <div class="attr-row"><span>accuracy:</span><strong>±0.05 ℃</strong></div>
+            <div class="block-section-title" style="margin-top: 6px;">Ports (接口)</div>
+            <div class="port-tag">fiberOutputPort</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧：属性检查器与 OpenSysML 语义诊断 -->
+    <aside class="syson-sidebar-right">
+      <div class="panel-header">
+        <span>属性检查器 (Properties)</span>
+        <span style="font-size: 10px; color: #0284c7;">Inspector</span>
+      </div>
+      <div class="prop-scroll">
+        <div class="prop-group">
+          <div class="prop-label">元素标识 (ID)</div>
+          <input class="prop-input" id="prop-id" readonly value="elem_spindle" />
+        </div>
+        <div class="prop-group">
+          <div class="prop-label">部件名称 (Part Name)</div>
+          <input class="prop-input" id="prop-name" value="HighSpeedSpindle" oninput="updateCurrentBlockName(this.value)" />
+        </div>
+        <div class="prop-group">
+          <div class="prop-label">包路径 (Package)</div>
+          <input class="prop-input" id="prop-pkg" value="Spindle_Subsystem" />
+        </div>
+        <div class="prop-group">
+          <div class="prop-label">SysML Stereotype</div>
+          <input class="prop-input" value="«part def» PhysicalComponent" readonly style="background: #f8fafc;" />
+        </div>
+        <div class="prop-group">
+          <div class="prop-label">OpenSysML 实时语义诊断</div>
+          <div class="semantic-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span>SysML v2 语法与接口匹配合规</span>
+          </div>
+        </div>
+        <div class="prop-group">
+          <div class="prop-label">操作 (Actions)</div>
+          <button style="width: 100%; padding: 6px; background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 4px; font-size: 12px; cursor: pointer;" onclick="deleteSelectedBlock()">
+            删除当前部件
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 4. 底部 SysML v2 源码与控制台 -->
+  <footer class="syson-bottom-drawer">
+    <div class="drawer-header">
+      <span>SysML v2 规范代码实时映射 (Textual Representation)</span>
+      <span style="color: #38bdf8; font-size: 10px;">双向同步状态: OK</span>
+    </div>
+    <div class="code-view" id="sysml-code-view">
+package 'VMC1000_RootPkg' {
+    doc /* 五轴立式数控机床SysML v2模型定义 */
+    part def HighSpeedSpindle {
+        attribute maxRpm = 18000;
+        attribute ratedPower = 24;
+        port spindleShaftPort;
+    }
+    part def XAxisFeedDrive {
+        attribute strokeLength = 1050;
+        port servoCommandPort;
+    }
+    part def Cnc840DController {
+        port motionBusOut;
+    }
+    connection c1 connect Cnc840DController.motionBusOut to HighSpeedSpindle.spindleShaftPort;
+}
+    </div>
+  </footer>
+
+  <script>
+    let activeTool = 'select';
+    let selectedBlockId = 'elem_spindle';
+    let zoomLevel = 1.0;
+
+    const connections = [
+      { from: 'elem_cnc_ctrl', to: 'elem_spindle' },
+      { from: 'elem_cnc_ctrl', to: 'elem_x_feed' },
+      { from: 'elem_opt_fiber', to: 'elem_cnc_ctrl' },
+    ];
+
+    window.onload = function() {
+      selectBlock('elem_spindle');
+      drawConnections();
+      syncSysmlCode();
+    };
+
+    function selectTool(tool) {
+      activeTool = tool;
+      document.querySelectorAll('.tool-item').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById(tool === 'select' ? 'tool-select' : 'tool-conn');
+      if (activeEl) activeEl.classList.add('active');
+    }
+
+    function selectBlock(id) {
+      selectedBlockId = id;
+      document.querySelectorAll('.sysml-block').forEach(b => b.classList.remove('selected'));
+      const target = document.getElementById(id);
+      if (target) {
+        target.classList.add('selected');
+        const title = target.querySelector('.block-title')?.textContent || '';
+        const pkg = target.querySelector('.block-package')?.textContent?.replace('pkg: ', '') || '';
+        document.getElementById('prop-id').value = id;
+        document.getElementById('prop-name').value = title;
+        document.getElementById('prop-pkg').value = pkg;
+      }
+    }
+
+    function updateCurrentBlockName(val) {
+      if (!selectedBlockId) return;
+      const target = document.getElementById(selectedBlockId);
+      if (target) {
+        const titleEl = target.querySelector('.block-title');
+        if (titleEl) titleEl.textContent = val;
+        syncSysmlCode();
+      }
+    }
+
+    function deleteSelectedBlock() {
+      if (!selectedBlockId) return;
+      const target = document.getElementById(selectedBlockId);
+      if (target) {
+        target.remove();
+        for (let i = connections.length - 1; i >= 0; i--) {
+          if (connections[i].from === selectedBlockId || connections[i].to === selectedBlockId) {
+            connections.splice(i, 1);
+          }
+        }
+        drawConnections();
+        syncSysmlCode();
+        selectedBlockId = null;
+        document.getElementById('prop-id').value = '';
+        document.getElementById('prop-name').value = '';
+        document.getElementById('prop-pkg').value = '';
+      }
+    }
+
+    function drawConnections() {
+      const svg = document.getElementById('svg-layer');
+      const defs = svg.querySelector('defs').outerHTML;
+      let linesHtml = defs;
+
+      connections.forEach(conn => {
+        const fromEl = document.getElementById(conn.from);
+        const toEl = document.getElementById(conn.to);
+        if (fromEl && toEl) {
+          const x1 = fromEl.offsetLeft + fromEl.offsetWidth / 2;
+          const y1 = fromEl.offsetTop + fromEl.offsetHeight / 2;
+          const x2 = toEl.offsetLeft + toEl.offsetWidth / 2;
+          const y2 = toEl.offsetTop + toEl.offsetHeight / 2;
+
+          linesHtml += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#0284c7" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow)" />`;
+        }
+      });
+      svg.innerHTML = linesHtml;
+    }
+
+    let dragTarget = null;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let blockStartX = 0;
+    let blockStartY = 0;
+
+    function startDrag(e, id) {
+      selectBlock(id);
+      dragTarget = document.getElementById(id);
+      if (!dragTarget) return;
+
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      blockStartX = dragTarget.offsetLeft;
+      blockStartY = dragTarget.offsetTop;
+
+      document.addEventListener('mousemove', onDragMove);
+      document.addEventListener('mouseup', onDragEnd);
+      e.stopPropagation();
+    }
+
+    function onDragMove(e) {
+      if (!dragTarget) return;
+      const dx = (e.clientX - dragStartX) / zoomLevel;
+      const dy = (e.clientY - dragStartY) / zoomLevel;
+      dragTarget.style.left = (blockStartX + dx) + 'px';
+      dragTarget.style.top = (blockStartY + dy) + 'px';
+      drawConnections();
+    }
+
+    function onDragEnd() {
+      dragTarget = null;
+      document.removeEventListener('mousemove', onDragMove);
+      document.removeEventListener('mouseup', onDragEnd);
+      drawConnections();
+    }
+
+    function addNewBlock(id, title, desc, pkg, attrs) {
+      const existing = document.getElementById(id);
+      if (existing) {
+        selectBlock(id);
+        return;
+      }
+      const container = document.getElementById('canvas-content');
+      const div = document.createElement('div');
+      div.className = 'sysml-block';
+      div.id = id;
+      div.style.left = (120 + Math.random() * 300) + 'px';
+      div.style.top = (150 + Math.random() * 200) + 'px';
+      div.onmousedown = (e) => startDrag(e, id);
+
+      let attrHtml = '';
+      if (attrs) {
+        Object.entries(attrs).forEach(([k, v]) => {
+          attrHtml += `<div class="attr-row"><span>${k}:</span><strong>${v}</strong></div>`;
+        });
+      }
+
+      div.innerHTML = `
+        <div class="block-header">
+          <div class="block-stereotype">«part def»</div>
+          <div class="block-title">${title}</div>
+          <div class="block-package">pkg: ${pkg}</div>
+        </div>
+        <div class="block-body">
+          <div class="block-section-title">Attributes</div>
+          ${attrHtml || '<div class="attr-row"><span>status:</span><strong>Active</strong></div>'}
+          <div class="block-section-title" style="margin-top: 6px;">Ports</div>
+          <div class="port-tag">sysInterfacePort</div>
+        </div>
+      `;
+      container.appendChild(div);
+      selectBlock(id);
+      if (document.getElementById('elem_cnc_ctrl')) {
+        connections.push({ from: 'elem_cnc_ctrl', to: id });
+      }
+      drawConnections();
+      syncSysmlCode();
+    }
+
+    function reLayoutCanvas() {
+      const blocks = Array.from(document.querySelectorAll('.sysml-block'));
+      blocks.forEach((b, i) => {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        b.style.left = (80 + col * 280) + 'px';
+        b.style.top = (70 + row * 260) + 'px';
+      });
+      drawConnections();
+      syncSysmlCode();
+    }
+
+    function zoomCanvas(delta) {
+      zoomLevel = Math.max(0.6, Math.min(1.8, zoomLevel + delta));
+      document.getElementById('canvas-content').style.transform = `scale(${zoomLevel})`;
+      document.getElementById('canvas-content').style.transformOrigin = '0 0';
+    }
+
+    function resetZoom() {
+      zoomLevel = 1.0;
+      document.getElementById('canvas-content').style.transform = `scale(1)`;
+    }
+
+    function syncSysmlCode() {
+      const blocks = Array.from(document.querySelectorAll('.sysml-block'));
+      let code = "package 'VMC1000_RootPkg' {\n    doc /* 由 Eclipse SysON 客户端生成的机床 SysML v2 模型 */\n\n";
+      blocks.forEach(b => {
+        const title = b.querySelector('.block-title')?.textContent || 'UnnamedPart';
+        code += `    part def ${title} {\n`;
+        const attrs = b.querySelectorAll('.attr-row');
+        attrs.forEach(a => {
+          const spans = a.querySelectorAll('span, strong');
+          if (spans.length >= 2) {
+            code += `        attribute ${spans[0].textContent.replace(':', '')} = ${spans[1].textContent};\n`;
+          }
+        });
+        const ports = b.querySelectorAll('.port-tag');
+        ports.forEach(p => {
+          code += `        port ${p.textContent};\n`;
+        });
+        code += `    }\n\n`;
+      });
+
+      connections.forEach((c, idx) => {
+        const f = document.getElementById(c.from)?.querySelector('.block-title')?.textContent;
+        const t = document.getElementById(c.to)?.querySelector('.block-title')?.textContent;
+        if (f && t) {
+          code += `    connection c_${idx+1} connect ${f} to ${t};\n`;
+        }
+      });
+      code += "}";
+      document.getElementById('sysml-code-view').textContent = code;
+    }
+
+    function exportSysmlCode() {
+      const code = document.getElementById('sysml-code-view').textContent;
+      const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'VMC1000_SysON_Export.sysml';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.action === 'ADD_COMPONENT') {
+        const c = e.data.payload;
+        addNewBlock(c.id, c.name, c.description, c.packageName, c.defaultAttrs);
+      }
+    });
+  </script>
+</body>
+</html>
